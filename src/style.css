@@ -630,3 +630,35 @@ a, button {
   .experience__item { flex-direction: column; align-items: flex-start; }
   .experience__meta { text-align: left; }
 }
+
+/* ============================================================
+   CUSTOM TECH CURSOR
+   ============================================================ */
+@media (pointer: fine) {
+  * { cursor: none !important; } /* Hides default mouse */
+}
+
+.tech-cursor {
+  position: fixed;
+  top: 0; 
+  left: 0;
+  pointer-events: none;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px; /* Normal distance between < and /> */
+  transform: translate(-50%, -50%);
+  font-family: monospace;
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: var(--color-accent);
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+  transition: gap 0.3s cubic-bezier(0.16, 1, 0.3, 1), color 0.3s ease;
+}
+
+/* When hovering over links or projects, the brackets expand wide */
+.tech-cursor.is-hovering {
+  gap: 40px; 
+  color: var(--color-accent-2);
+}
