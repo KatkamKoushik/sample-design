@@ -12,127 +12,110 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 // Global FBO mouse position (centered coordinate system)
 let fboMouse = new THREE.Vector3(0, 0, 0)
 
+// ─────────────────────────────────────────────────
+// PROJECT DATA
+// ─────────────────────────────────────────────────
+const projects = [
+  { title: 'Simple Web Pages',      tag: 'HTML / CSS',          year: '2024', image: '/project_web.png',   url: '#' },
+  { title: 'AI Automation Workflow',tag: 'AI / Automation',      year: '2025', image: '/project_ai.png',    url: '#' },
+]
+
 const app = document.querySelector('#app')
 
 app.innerHTML = `
 <header class="site-header">
-<div class="site-header__inner">
-<a href="#top" class="site-header__logo">Your Name</a>
-<nav class="site-header__nav" aria-label="Primary navigation">
-<button class="site-header__link" type="button" data-scroll-target="#about">About</button>
-<button class="site-header__link" type="button" data-scroll-target="#skills">Skills</button>
-<button class="site-header__link" type="button" data-scroll-target="#projects">Projects</button>
-<button class="site-header__link" type="button" data-scroll-target="#contact">Contact</button>
-</nav>
-</div>
+  <div class="site-header__inner">
+    <a href="#top" class="site-header__logo">PS</a>
+    <nav class="site-header__nav" aria-label="Primary navigation">
+      <button class="site-header__link" type="button" data-scroll-target="#about">About</button>
+      <button class="site-header__link" type="button" data-scroll-target="#skills">Skills</button>
+      <button class="site-header__link" type="button" data-scroll-target="#projects">Projects</button>
+      <button class="site-header__link" type="button" data-scroll-target="#contact">Contact</button>
+    </nav>
+  </div>
 </header>
 
 <main class="page" id="top">
-<section class="hero" aria-labelledby="hero-title">
-<div class="hero__content">
-<p class="hero__eyebrow">Creative Developer</p>
-<h1 id="hero-title" class="hero__title">Digital experiences, crafted with care.</h1>
-<p class="hero__subtitle">
-A minimal starting point for a premium portfolio — powered by Vite, Three.js, GSAP and Lenis.
-</p>
-</div>
-</section>
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero__content">
+      <p class="hero__eyebrow">Computer Science Student</p>
+      <h1 id="hero-title" class="hero__title">Pidugu Shivaram, building the web.</h1>
+      <p class="hero__subtitle">
+        Motivated B.Tech CSE student with a strong foundation in C, HTML, CSS, and SQL. Eager to contribute to web development and software projects while growing fast.
+      </p>
+    </div>
+  </section>
 
-<section class="about" id="about" aria-labelledby="about-title">
-<h2 id="about-title" class="section-label">About</h2>
-<div class="about__content">
-<h3 class="about__headline">Building thoughtful digital experiences with code, craft, and curiosity.</h3>
-<p class="about__body">
-I design and develop interfaces that feel intentional, minimal, and alive. From interactive visuals and
-data-driven products to end‑to‑end web platforms, I care about details, performance, and creating work that
-feels quietly premium.
-</p>
-</div>
-</section>
+  <section class="about" id="about" aria-labelledby="about-title">
+    <h2 id="about-title" class="section-label">About</h2>
+    <div class="about__content">
+      <h3 class="about__headline">Motivated problem-solver seeking to apply technical skills in real-world projects.</h3>
+      <p class="about__body">
+        I'm a 2nd-year B.Tech Computer Science Engineering student at Ku College of Engineering and Technology, Peddapalli, Telangana. I have a strong foundation in C programming, web technologies (HTML & CSS), and SQL databases. I'm eager to grow, learn fast, and deliver meaningful contributions in web development or software-related roles.
+      </p>
+    </div>
+  </section>
 
-<section class="skills" id="skills" aria-labelledby="skills-title">
-<h2 id="skills-title" class="section-label">Skills</h2>
-<div class="skills__grid">
-<article class="skills__card">
-<h3 class="skills__title">AI &amp; Machine Learning</h3>
-<p class="skills__meta">Python · PyTorch · Transformers</p>
-</article>
-<article class="skills__card">
-<h3 class="skills__title">Full‑Stack Development</h3>
-<p class="skills__meta">TypeScript · React · Node · APIs</p>
-</article>
-<article class="skills__card">
-<h3 class="skills__title">Data &amp; Analytics</h3>
-<p class="skills__meta">Data pipelines · Dashboards · Experimentation</p>
-</article>
-<article class="skills__card">
-<h3 class="skills__title">Creative Engineering</h3>
-<p class="skills__meta">Three.js · GSAP · Creative tooling</p>
-</article>
-</div>
-</section>
+  <section class="skills" id="skills" aria-labelledby="skills-title">
+    <h2 id="skills-title" class="section-label">Skills</h2>
+    <div class="skills__grid">
+      <article class="skills__card"><h3 class="skills__title">Programming Languages</h3><p class="skills__meta">C</p></article>
+      <article class="skills__card"><h3 class="skills__title">Web Technologies</h3><p class="skills__meta">HTML · CSS</p></article>
+      <article class="skills__card"><h3 class="skills__title">Database</h3><p class="skills__meta">SQL</p></article>
+      <article class="skills__card"><h3 class="skills__title">Tools & Platforms</h3><p class="skills__meta">VS Code · Git · GitHub · Microsoft Excel</p></article>
+    </div>
+  </section>
 
-<section class="experience" aria-labelledby="experience-title">
-<h2 id="experience-title" class="section-label">Experience &amp; Certifications</h2>
-<ul class="experience__list">
-<li class="experience__item">
-<span class="experience__label">AI Hackathon Finalist</span>
-<span class="experience__meta">2025 · Prototype for real‑time generative visuals</span>
-</li>
-<li class="experience__item">
-<span class="experience__label">Deep Learning Specialization</span>
-<span class="experience__meta">Coursera · Neural networks &amp; applied ML</span>
-</li>
-<li class="experience__item">
-<span class="experience__label">Full‑Stack Web Certification</span>
-<span class="experience__meta">Modern JavaScript, React, Node.js</span>
-</li>
-</ul>
-</section>
+  <section class="experience" aria-labelledby="experience-title">
+    <h2 id="experience-title" class="section-label">Education</h2>
+    <ul class="experience__list">
+      <li class="experience__item">
+        <span class="experience__label">B.Tech in Computer Science Engineering</span>
+        <span class="experience__meta">Ku College of Engineering & Technology · Currently 2nd Year · 2023–2027</span>
+      </li>
+    </ul>
+  </section>
 
-<section class="projects" id="projects" aria-labelledby="projects-title">
-<header class="projects__header">
-<h2 id="projects-title" class="section-label">Selected projects</h2>
-<p class="projects__subtitle">
-Placeholder frames for your future work. Replace these with real content as your portfolio grows.
-</p>
-</header>
-<div class="projects__grid">
-<div class="image-placeholder" data-image="/image.jpg"></div>
-<div class="image-placeholder" data-image="/image2.jpg"></div>
-<div class="image-placeholder" data-image="/image3.jpg"></div>
-<div class="image-placeholder" data-image="/image.jpg"></div>
-<div class="image-placeholder" data-image="/image2.jpg"></div>
-<div class="image-placeholder" data-image="/image3.jpg"></div>
-</div>
-</section>
+  <section class="projects" id="projects" aria-labelledby="projects-title">
+    <header class="projects__header">
+      <h2 id="projects-title" class="section-label">Selected projects</h2>
+      <p class="projects__subtitle">A selection of recent work spanning AI products, creative engineering, and full-stack platforms.</p>
+    </header>
+    <div class="projects__grid">
+      ${projects.map(p => `
+        <div class="project-card" data-url="${p.url}">
+          <div class="image-placeholder" data-image="${p.image}"></div>
+          <div class="project-card__info">
+            <span class="project-card__tag">${p.tag}</span>
+            <h3 class="project-card__title">${p.title}</h3>
+            <span class="project-card__year">${p.year}</span>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  </section>
 
-<section class="contact" id="contact" aria-labelledby="contact-title">
-<div class="contact__inner">
-<div class="contact__copy">
-<h2 id="contact-title" class="section-label">Contact</h2>
-<p class="contact__headline">Let&apos;s collaborate on something meaningful.</p>
-<p class="contact__body">
-Whether you&apos;re exploring an idea, looking for a long‑term collaborator, or just curious about the work,
-feel free to reach out.
-</p>
-</div>
-<div class="contact__actions">
-<a class="contact__email" href="mailto:you@example.com">you@example.com</a>
-<div class="contact__buttons">
-<button type="button" class="button button--primary">Download resume</button>
-<div class="contact__links">
-<a href="https://github.com/your-handle" target="_blank" rel="noreferrer">GitHub</a>
-<span>·</span>
-<a href="https://linkedin.com/in/your-handle" target="_blank" rel="noreferrer">LinkedIn</a>
-</div>
-</div>
-</div>
-</div>
-<footer class="footer">
-<p class="footer__text">© ${new Date().getFullYear()} Your Name. All rights reserved.</p>
-</footer>
-</section>
+  <section class="contact" id="contact" aria-labelledby="contact-title">
+    <div class="contact__inner">
+      <div class="contact__copy">
+        <h2 id="contact-title" class="section-label">Contact</h2>
+        <p class="contact__headline">Let's collaborate on something meaningful.</p>
+        <p class="contact__body">Whether you're exploring an idea, looking for an internship opportunity, or curious about my work — feel free to reach out. Based in Peddapalli, Telangana · +91 9515546704</p>
+      </div>
+      <div class="contact__actions">
+        <a class="contact__email" href="mailto:pidugushivaram@gmail.com">pidugushivaram@gmail.com</a>
+        <div class="contact__buttons">
+          <a href="/resume.pdf" download class="button button--primary">Download Resume</a>
+          <div class="contact__links">
+            <a href="https://www.linkedin.com/in/shivarampidugu" target="_blank" rel="noreferrer">LinkedIn</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <footer class="footer">
+      <p class="footer__text">© ${new Date().getFullYear()} Pidugu Shivaram. All rights reserved.</p>
+    </footer>
+  </section>
 </main>
 `
 
