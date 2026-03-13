@@ -177,7 +177,7 @@ ease: 'power4.out'
 }, '-=0.9');
 
 // Section scroll animations
-document.querySelectorAll('.about, .skills, .experience').forEach((section) => {
+document.querySelectorAll('.about, .skills, .experience, .projects').forEach((section) => {
 gsap.from(section, {
 y: 50,
 opacity: 0,
