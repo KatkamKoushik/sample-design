@@ -67,7 +67,7 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  cursor: none; /* custom cursor takes over on desktop */
+  
   overflow-x: hidden;
 }
 
