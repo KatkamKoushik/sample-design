@@ -887,5 +887,12 @@ finalComposer.render();
 requestAnimationFrame(raf);
 }
 
+
+// Initialize our custom tech cursor
+const cursor = initCursor()
+if (cursor && typeof cursor.setupMagnetic === 'function') {
+  cursor.setupMagnetic()
+}
+
 // FIX 3: Actually start the heartbeat loop
 raf(performance.now());
