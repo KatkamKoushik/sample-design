@@ -17,8 +17,8 @@ let fboMouse = new THREE.Vector3(0, 0, 0)
 // PROJECT DATA
 // ─────────────────────────────────────────────────
 const projects = [
-  { title: 'Simple Web Pages',      tag: 'HTML / CSS',          year: '2024', image: '/image3.jpg',   url: '#' },
-  { title: 'AI Automation Workflow',tag: 'AI / Automation',      year: '2025', image: '/project_ai.png',    url: '#' },
+  { title: 'Simple Web Pages',      tag: 'HTML / CSS',          year: '2024', image: '/image.jpg',   url: '#' },
+  { title: 'AI Automation Workflow',tag: 'AI / Automation',      year: '2025', image: '/image2.jpg',    url: '#' },
 ]
 
 const app = document.querySelector('#app')
