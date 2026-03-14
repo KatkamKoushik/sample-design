@@ -11,6 +11,8 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 
 let fboMouse = new THREE.Vector3(0, 0, 0)
+// [BUG FIX]: Track actual screen coordinates to calculate local UVs later without layout thrashing
+let pointerScreen = new THREE.Vector2(window.innerWidth / 2, window.innerHeight / 2)
 
 const projects = [
   { image: '/image.jpg',   url: '#' },
@@ -136,13 +138,16 @@ function splitWords(selector) {
 
     wrapper.appendChild(inner);
     element.appendChild(wrapper);
+    
+    // [BUG FIX]: Inject a hidden space after each word so screen readers and copy/paste work normally
+    const space = document.createTextNode(' ');
+    element.appendChild(space);
   });
 }
 
 splitWords('.hero__title');
 splitWords('.hero__subtitle');
 
-// --- PRELOADER & HERO ANIMATION LOGIC ---
 const heroTimeline = gsap.timeline({ paused: true });
 
 heroTimeline.from('.hero__eyebrow', {
@@ -243,8 +248,9 @@ uniform float uHoverStrength;
 varying vec2 vUv;
 
 void main() {
-  float imageAspect = uImageSize.x / uImageSize.y;
-  float planeAspect = uPlaneSize.x / uPlaneSize.y;
+  // [BUG FIX]: Added max() to prevent dividing by zero if layout hasn't computed yet
+  float imageAspect = uImageSize.x / max(uImageSize.y, 0.001);
+  float planeAspect = uPlaneSize.x / max(uPlaneSize.y, 0.001);
   vec2 uv = vUv;
 
   if (imageAspect > planeAspect) {
@@ -279,7 +285,6 @@ const sizes = {
   height: window.innerHeight,
 }
 
-// ULTIMATE HARDWARE CHECK: Forces mobile mode if the device has a touch screen, regardless of width!
 const isTouchDevice = window.matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window);
 let isMobile = window.innerWidth < 768 || isTouchDevice;
 
@@ -309,8 +314,9 @@ bloomComposer.renderToScreen = false
 bloomComposer.addPass(renderScene)
 bloomComposer.addPass(bloomPass)
 
+// [BUG FIX]: Corrected ShaderPass initialization. It expects a configuration object, not an instantiated Material.
 const finalPass = new ShaderPass(
-  new THREE.ShaderMaterial({
+  {
     uniforms: {
       baseTexture: { value: null },
       bloomTexture: { value: null }, 
@@ -332,8 +338,7 @@ const finalPass = new ShaderPass(
         gl_FragColor = base + bloom;
       }
     `,
-    defines: {},
-  }),
+  },
   'baseTexture',
 )
 finalPass.needsSwap = true
@@ -341,8 +346,7 @@ finalPass.needsSwap = true
 finalComposer.addPass(renderScene)
 finalComposer.addPass(finalPass)
 
-// FBO Setup
-const COMPUTE_SIZE = isMobile ? 128 : 256;
+let COMPUTE_SIZE = isMobile ? 128 : 256;
 let gpuCompute = null
 let positionVariable = null
 let velocityVariable = null
@@ -519,37 +523,36 @@ function initParticles() {
   particles = new THREE.Points(geometry, pointsMaterial)
   particles.frustumCulled = false
   particles.position.z = -300
-  particles.layers.enable(BLOOM_LAYER) 
+  // [BUG FIX]: Use .set() instead of .enable() so particles do NOT render twice (once in base pass, once in bloom pass).
+  particles.layers.set(BLOOM_LAYER) 
   scene.add(particles)
 }
 initParticles()
 
 const placeholderMeshes = []
 const textureLoader = new THREE.TextureLoader()
+// [BUG FIX]: Initialize base geometry once as a 1x1 plane, then scale it dynamically to prevent resize memory leaks
+const planeGeometry = new THREE.PlaneGeometry(1, 1, 32, 32)
 
 function createPlaceholderMeshes() {
-  placeholderMeshes.forEach(({ mesh }) => {
-    scene.remove(mesh)
-    mesh.geometry.dispose()
-    mesh.material.dispose()
-  })
-  placeholderMeshes.length = 0
-
   document.querySelectorAll('.image-placeholder').forEach((element) => {
     const rect = element.getBoundingClientRect()
-    const geometry = new THREE.PlaneGeometry(rect.width, rect.height, 32, 32)
+    
     const material = new THREE.ShaderMaterial({
       uniforms: {
         uTexture: { value: null }, uVelocity: { value: 0 }, uHoverStrength: { value: 0 },
         uMouse: { value: new THREE.Vector2(0.5, 0.5) }, uImageSize: { value: new THREE.Vector2(1, 1) },
-        uPlaneSize: { value: new THREE.Vector2(rect.width, rect.height) },
+        uPlaneSize: { value: new THREE.Vector2(Math.max(rect.width, 1), Math.max(rect.height, 1)) },
       },
       vertexShader, fragmentShader, transparent: true,
     })
-    const mesh = new THREE.Mesh(geometry, material)
+    
+    const mesh = new THREE.Mesh(planeGeometry, material)
 
     const imageUrl = element.dataset.image
     if (imageUrl) {
+      // [BUG FIX]: Set a default aspect ratio matching the div until the image loads to avoid a 1x1 stretching glitch
+      material.uniforms.uImageSize.value.set(rect.width, rect.height)
       textureLoader.load(imageUrl, (texture) => {
         if (texture.image) material.uniforms.uImageSize.value.set(texture.image.width, texture.image.height)
         material.uniforms.uTexture.value = texture
@@ -574,9 +577,12 @@ function handleInput(event) {
     if (cursorEl) cursorEl.style.opacity = '1';
   }
 
-  const rect = renderer.domElement.getBoundingClientRect()
-  pointerNDC.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
-  pointerNDC.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+  // [BUG FIX]: Removed DOM getBoundingClientRect layout thrashing on mouse move. We just use window dimensions.
+  pointerNDC.x = (event.clientX / sizes.width) * 2 - 1
+  pointerNDC.y = -(event.clientY / sizes.height) * 2 + 1
+  
+  pointerScreen.x = event.clientX;
+  pointerScreen.y = event.clientY;
 
   if (typeof fboMouse !== 'undefined') {
     fboMouse.x = event.clientX; fboMouse.y = window.innerHeight - event.clientY; fboMouse.z = 0;
@@ -587,10 +593,12 @@ window.addEventListener('pointermove', handleInput);
 window.addEventListener('pointerdown', handleInput);
 
 function updatePlaceholderMeshTransforms(scrollY = 0) {
-  const viewportHeight = sizes.height
   placeholderMeshes.forEach(({ element, mesh }) => {
     const rect = element.getBoundingClientRect()
-    mesh.position.set(rect.left + rect.width / 2, viewportHeight - (rect.top + rect.height / 2), 0)
+    // [BUG FIX]: Scale the 1x1 geometry to match the DOM element's exact size instead of destroying/recreating it
+    mesh.scale.set(Math.max(rect.width, 1), Math.max(rect.height, 1), 1)
+    mesh.position.set(rect.left + rect.width / 2, sizes.height - (rect.top + rect.height / 2), 0)
+    mesh.material.uniforms.uPlaneSize.value.set(rect.width, rect.height)
   })
 }
 
@@ -598,7 +606,16 @@ function onResize() {
   sizes.width = window.innerWidth
   sizes.height = window.innerHeight
   const touchCheck = window.matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window);
-  isMobile = window.innerWidth < 768 || touchCheck;
+  const newIsMobile = window.innerWidth < 768 || touchCheck;
+
+  // [BUG FIX]: Safely rebuild the particle FBO if the user drastically changes screen sizes (e.g. tablet rotation)
+  if (newIsMobile !== isMobile) {
+    isMobile = newIsMobile;
+    COMPUTE_SIZE = isMobile ? 128 : 256;
+    if (particles) { scene.remove(particles); particles.geometry.dispose(); particles.material.dispose(); }
+    initGpuCompute();
+    initParticles();
+  }
 
   camera.right = sizes.width
   camera.top = sizes.height
@@ -615,7 +632,7 @@ function onResize() {
   if (positionVariable && positionVariable.material) positionVariable.material.uniforms.uBounds.value.set(sizes.width, sizes.height, 100)
   if (velocityVariable && velocityVariable.material) velocityVariable.material.uniforms.uBounds.value.set(sizes.width, sizes.height, 100)
 
-  createPlaceholderMeshes()
+  // [BUG FIX]: ONLY update transforms on resize. Removed `createPlaceholderMeshes()` to stop destroying textures and crashing memory.
   updatePlaceholderMeshTransforms()
 }
 window.addEventListener('resize', onResize)
@@ -629,7 +646,12 @@ let scrollVelocity = 0
 let smoothedVelocity = 0
 let lastRafTime = performance.now()
 
-lenis.on('scroll', ({ scroll, velocity }) => { currentScroll = scroll; scrollVelocity = velocity; })
+lenis.on('scroll', ({ scroll, velocity }) => { 
+  currentScroll = scroll; 
+  scrollVelocity = velocity; 
+  // [BUG FIX]: Sync Lenis and ScrollTrigger internally so animations trigger perfectly
+  ScrollTrigger.update();
+})
 
 document.querySelectorAll('[data-scroll-target]').forEach((button) => {
   button.addEventListener('click', (event) => {
@@ -655,11 +677,17 @@ function raf(time) {
     intersects = raycaster.intersectObjects(placeholderMeshes.map(p => p.mesh));
   }
 
-  placeholderMeshes.forEach(({ mesh }) => {
+  placeholderMeshes.forEach(({ element, mesh }) => {
     mesh.material.uniforms.uVelocity.value = smoothedVelocity;
+    
     const isHovered = intersects.length > 0 && intersects[0].object === mesh;
     mesh.material.uniforms.uHoverStrength.value += ((isHovered ? 1.0 : 0.0) - mesh.material.uniforms.uHoverStrength.value) * 0.1;
-    mesh.material.uniforms.uMouse.value.set((pointerNDC.x * 0.5) + 0.5, (pointerNDC.y * 0.5) + 0.5);
+    
+    // [BUG FIX]: Calculate local UV space mapping so hover effects track exactly where the mouse is on the specific image.
+    const rect = element.getBoundingClientRect();
+    const localX = (pointerScreen.x - rect.left) / Math.max(rect.width, 1.0);
+    const localY = (pointerScreen.y - rect.top) / Math.max(rect.height, 1.0);
+    mesh.material.uniforms.uMouse.value.set(localX, 1.0 - localY);
   });
 
   if (gpuCompute && positionVariable && velocityVariable) {
