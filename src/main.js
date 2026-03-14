@@ -24,7 +24,12 @@ const projects = [
 const app = document.querySelector('#app')
 
 app.innerHTML = `
+<div class="preloader">
+  <div class="preloader__count">0%</div>
+  <div class="preloader__bar"></div>
+</div>
 <header class="site-header">
+
   <div class="site-header__inner">
     <a href="#top" class="site-header__logo">PS</a>
     <nav class="site-header__nav" aria-label="Primary navigation">
