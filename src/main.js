@@ -849,9 +849,14 @@ function raf(time) {
   requestAnimationFrame(raf);
 }
 
-const cursor = initCursor()
-if (cursor && typeof cursor.setupMagnetic === 'function') {
-  cursor.setupMagnetic()
+// --- FIX 1: Only build the custom cursor if the device has a real mouse/trackpad ---
+// This completely disables it for mobile, even in "Desktop Mode"
+if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+  const cursor = initCursor();
+  if (cursor && typeof cursor.setupMagnetic === 'function') {
+    cursor.setupMagnetic();
+  }
 }
 
+// Start the heartbeat loop
 raf(performance.now());
