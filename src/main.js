@@ -603,41 +603,46 @@ function createPlaceholderMeshes() {
 const raycaster = new THREE.Raycaster()
 const pointerNDC = new THREE.Vector2(2, 2)
 
+function updatePointerFromClient(clientX, clientY) {
+  pointerScreen.x = clientX
+  pointerScreen.y = clientY
+
+  pointerNDC.x = (clientX / sizes.width) * 2 - 1
+  pointerNDC.y = -(clientY / sizes.height) * 2 + 1
+
+  if (typeof fboMouse !== 'undefined') {
+    fboMouse.x = clientX
+    fboMouse.y = sizes.height - clientY
+    fboMouse.z = 0
+  }
+}
+
+function resetPointerInteraction() {
+  pointerNDC.set(2, 2)
+  pointerScreen.set(window.innerWidth * 2, window.innerHeight * 2)
+
+  if (typeof fboMouse !== 'undefined') {
+    fboMouse.set(-10_000, -10_000, 0)
+  }
+}
+
 // [BUG FIX]: Consolidated mouse listeners to stop getBoundingClientRect layout thrashing
 window.addEventListener('pointermove', (event) => {
-  // Save screen space coords for local UV math later
-  pointerScreen.x = event.clientX;
-  pointerScreen.y = event.clientY;
-
-  // Normalized coordinates for Raycasting
-  pointerNDC.x = (event.clientX / sizes.width) * 2 - 1
-  pointerNDC.y = -(event.clientY / sizes.height) * 2 + 1
-
-  // Map mouse for FBO particle interaction
-  if (typeof fboMouse !== 'undefined') {
-    fboMouse.x = event.clientX;
-    fboMouse.y = sizes.height - event.clientY; 
-    fboMouse.z = 0;
-  }
+  updatePointerFromClient(event.clientX, event.clientY)
 })
 
 // [BUG FIX]: Touch event handling so particles respond on mobile
-window.addEventListener('touchmove', (event) => {
+const handleTouchPointer = (event) => {
   if (event.touches.length === 0) return;
   const touch = event.touches[0];
 
-  pointerScreen.x = touch.clientX;
-  pointerScreen.y = touch.clientY;
+  updatePointerFromClient(touch.clientX, touch.clientY);
+};
 
-  pointerNDC.x = (touch.clientX / sizes.width) * 2 - 1;
-  pointerNDC.y = -(touch.clientY / sizes.height) * 2 + 1;
-
-  if (typeof fboMouse !== 'undefined') {
-    fboMouse.x = touch.clientX;
-    fboMouse.y = sizes.height - touch.clientY;
-    fboMouse.z = 0;
-  }
-}, { passive: true })
+window.addEventListener('touchstart', handleTouchPointer, { passive: true })
+window.addEventListener('touchmove', handleTouchPointer, { passive: true })
+window.addEventListener('touchend', resetPointerInteraction, { passive: true })
+window.addEventListener('touchcancel', resetPointerInteraction, { passive: true })
 
 function updatePlaceholderMeshTransforms(scrollY = 0) {
   const viewportHeight = sizes.height
