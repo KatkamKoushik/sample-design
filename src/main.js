@@ -11,12 +11,9 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 
-// Global FBO mouse position (centered coordinate system)
 let fboMouse = new THREE.Vector3(0, 0, 0)
+let pointerScreen = new THREE.Vector2(window.innerWidth / 2, window.innerHeight / 2)
 
-// ─────────────────────────────────────────────────
-// PROJECT DATA
-// ─────────────────────────────────────────────────
 const projects = [
   { title: 'Simple Web Pages', tag: 'HTML / CSS', year: '2024', image: '/image.jpg', url: '#' },
   { title: 'AI Automation Workflow', tag: 'AI / Automation', year: '2025', image: '/image2.jpg', url: '#' },
@@ -119,11 +116,28 @@ app.innerHTML = `
     </footer>
   </section>
 </main>
+
+<button id="ai-chat-toggle" class="ai-chat-toggle" aria-label="Open AI Assistant">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+</button>
+
+<div id="ai-chat-window" class="ai-chat-window">
+  <div class="ai-chat-header">
+    <span class="ai-chat-title">AI Assistant</span>
+    <button id="ai-chat-close" class="ai-chat-close" aria-label="Close chat">✕</button>
+  </div>
+  <div id="ai-chat-messages" class="ai-chat-messages">
+    <div class="chat-msg ai-msg">Hello! I'm the AI assistant for Shivaram's portfolio. How can I help you today?</div>
+  </div>
+  <div class="ai-chat-input-area">
+    <input type="text" id="ai-chat-input" placeholder="Ask me to scroll, or about the stack..." autocomplete="off"/>
+    <button id="ai-chat-send">Send</button>
+  </div>
+</div>
 `
 
 gsap.registerPlugin(ScrollTrigger)
 
-// --- Premium Text Splitter Utility ---
 function splitWords(selector) {
   const element = document.querySelector(selector);
   if (!element) return;
@@ -142,59 +156,43 @@ function splitWords(selector) {
 
     wrapper.appendChild(inner);
     element.appendChild(wrapper);
+    
+    // [BUG FIX]: Inject a hidden space node after each word to preserve layout accessibility
+    const space = document.createTextNode(' ');
+    element.appendChild(space);
   });
 }
 
 splitWords('.hero__title');
 splitWords('.hero__subtitle');
 
-// --- The Cascade Animation ---
 const heroTimeline = gsap.timeline({ paused: true });
 
-heroTimeline.from('.hero__eyebrow', {
-  opacity: 0,
-  duration: 1,
-  ease: 'power3.inOut'
-});
+heroTimeline.from('.hero__eyebrow', { opacity: 0, duration: 1, ease: 'power3.inOut' });
 
 heroTimeline.to('.hero__title .reveal-word', {
-  y: '0%',
-  duration: 1.2,
-  stagger: 0.04,
-  ease: 'power4.out'
+  y: '0%', duration: 1.2, stagger: 0.04, ease: 'power4.out'
 }, '-=0.5');
 
 heroTimeline.to('.hero__subtitle .reveal-word', {
-  y: '0%',
-  duration: 1.0,
-  stagger: 0.02,
-  ease: 'power4.out'
+  y: '0%', duration: 1.0, stagger: 0.02, ease: 'power4.out'
 }, '-=0.9');
 
-// Start the preloader and pass the timeline so it can play when ready
 initPreloader(() => heroTimeline.play());
 
-// Section scroll animations
 document.querySelectorAll('.about, .skills, .experience, .projects').forEach((section) => {
   gsap.from(section, {
-    y: 50,
-    opacity: 0,
-    duration: 1.1,
-    ease: 'power3.out',
+    y: 50, opacity: 0, duration: 1.1, ease: 'power3.out',
     scrollTrigger: {
-      trigger: section,
-      start: 'top 80%',
-      toggleActions: 'play none none reverse',
+      trigger: section, start: 'top 80%', toggleActions: 'play none none reverse',
     },
   })
 })
 
-// Create a full-viewport background canvas
 const backgroundCanvas = document.createElement('canvas')
 backgroundCanvas.className = 'scene-canvas'
 document.body.appendChild(backgroundCanvas)
 
-// Basic Three.js scene with an orthographic camera
 const scene = new THREE.Scene()
 
 const vertexShader = `
@@ -212,7 +210,6 @@ void main() {
 
   float bendY = -sign(uVelocity) * strength * curveProfile * 50.0;
   float bendZ = strength * curveProfile * 140.0;
-
   bendZ += uHoverStrength * 20.0;
 
   transformed.y += bendY;
@@ -231,8 +228,10 @@ uniform float uHoverStrength;
 varying vec2 vUv;
 
 void main() {
-  float imageAspect = uImageSize.x / uImageSize.y;
-  float planeAspect = uPlaneSize.x / uPlaneSize.y;
+  // [BUG FIX]: Added max() to prevent dividing by zero if layout hasn't computed yet
+  float imageAspect = uImageSize.x / max(uImageSize.y, 0.001);
+  float planeAspect = uPlaneSize.x / max(uPlaneSize.y, 0.001);
+
   vec2 uv = vUv;
 
   if (imageAspect > planeAspect) {
@@ -269,9 +268,7 @@ const sizes = {
 
 let isMobile = window.innerWidth < 768
 
-const camera = new THREE.OrthographicCamera(
-  0, sizes.width, sizes.height, 0, -1000, 1000
-)
+const camera = new THREE.OrthographicCamera(0, sizes.width, sizes.height, 0, -1000, 1000)
 camera.position.z = 10
 
 const renderer = new THREE.WebGLRenderer({
@@ -283,7 +280,6 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 renderer.setSize(sizes.width, sizes.height)
 renderer.setClearColor(0x000000, 0)
 
-// --- Post-processing (selective bloom: particles only) ---
 const BLOOM_LAYER = 1
 const bloomComposer = new EffectComposer(renderer)
 const finalComposer = new EffectComposer(renderer)
@@ -292,15 +288,16 @@ const renderScene = new RenderPass(scene, camera)
 
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(sizes.width, sizes.height),
-  0.85, 0.95, 0.6 
+  0.85, 0.95, 0.6
 )
 
 bloomComposer.renderToScreen = false
 bloomComposer.addPass(renderScene)
 bloomComposer.addPass(bloomPass)
 
+// [BUG FIX]: ShaderPass expects a configuration object, not an instantiated THREE.ShaderMaterial
 const finalPass = new ShaderPass(
-  new THREE.ShaderMaterial({
+  {
     uniforms: {
       baseTexture: { value: null },
       bloomTexture: { value: null }, 
@@ -321,9 +318,8 @@ const finalPass = new ShaderPass(
         vec4 bloom = texture2D(bloomTexture, vUv);
         gl_FragColor = base + bloom;
       }
-    `,
-    defines: {},
-  }),
+    `
+  },
   'baseTexture',
 )
 finalPass.needsSwap = true
@@ -331,13 +327,8 @@ finalPass.needsSwap = true
 finalComposer.addPass(renderScene)
 finalComposer.addPass(finalPass)
 
-// --- FBO / GPGPU bootstrap ---
-const COMPUTE_SIZE = 128 // Fixed to 128 for stable performance
-let gpuCompute = null
-let positionVariable = null
-let velocityVariable = null
-let particles = null
-let pointsMaterial = null
+const COMPUTE_SIZE = 236
+let gpuCompute = null, positionVariable = null, velocityVariable = null, particles = null, pointsMaterial = null
 
 function fillPositionTexture(texture) {
   const data = texture.image.data
@@ -352,7 +343,7 @@ function fillPositionTexture(texture) {
 function fillVelocityTexture(texture) {
   const data = texture.image.data
   for (let i = 0; i < data.length; i += 4) {
-    data[i + 0] = 0; data[i + 1] = 0; data[i + 2] = 0; data[i + 3] = 1;
+    data[i] = 0; data[i + 1] = 0; data[i + 2] = 0; data[i + 3] = 1;
   }
 }
 
@@ -366,129 +357,75 @@ function initGpuCompute() {
     fillVelocityTexture(velocityTexture)
 
     const positionFragmentShader = `
-      uniform vec3 uBounds;
-      uniform float uDelta;
-      uniform float uTime;
-
+      uniform vec3 uBounds; uniform float uDelta; uniform float uTime;
       void main() {
         vec2 uv = gl_FragCoord.xy / resolution.xy;
         vec4 pos = texture2D(texturePosition, uv);
         vec4 vel = texture2D(textureVelocity, uv);
-
         vec3 nextPos = pos.xyz + vel.xyz;
-
         vec3 center = vec3(uBounds.x * 0.5, uBounds.y * 0.5, 0.0);
         vec3 span = vec3(uBounds.x, uBounds.y, uBounds.z);
-
         float h = fract(sin(dot(uv + uTime * 0.01, vec2(12.9898, 78.233))) * 43758.5453);
         float h2 = fract(sin(dot(uv + vec2(4.123, 9.456) + uTime * 0.02, vec2(39.346, 11.135))) * 24634.6345);
-
         bool outX = abs(nextPos.x - center.x) > span.x * 1.25;
         bool outY = abs(nextPos.y - center.y) > span.y * 1.25;
         bool outZ = abs(nextPos.z) > span.z * 1.25;
-
         if (outX || outY || outZ) {
-          nextPos = center + vec3(
-            (h - 0.5) * uBounds.x * 0.15,
-            (h2 - 0.5) * uBounds.y * 0.15,
-            (h - 0.5) * uBounds.z * 0.15
-          );
+          nextPos = center + vec3((h - 0.5) * uBounds.x * 0.15, (h2 - 0.5) * uBounds.y * 0.15, (h - 0.5) * uBounds.z * 0.15);
         }
-
         gl_FragColor = vec4(nextPos, 1.0);
       }
     `
     const velocityFragmentShader = `
-      uniform vec3 uMouse;
-      uniform vec3 uBounds;
-      uniform float uDelta;
-      uniform float uTime;
-
+      uniform vec3 uMouse; uniform vec3 uBounds; uniform float uDelta; uniform float uTime;
       vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
       vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
       vec4 permute(vec4 x) { return mod289(((x*34.0)+10.0)*x); }
       vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
-
       float snoise(vec3 v) {
-        const vec2 C = vec2(1.0/6.0, 1.0/3.0) ;
-        const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
-        vec3 i = floor(v + dot(v, C.yyy) );
-        vec3 x0 = v - i + dot(i, C.xxx) ;
-        vec3 g = step(x0.yzx, x0.xyz);
-        vec3 l = 1.0 - g;
-        vec3 i1 = min( g.xyz, l.zxy );
-        vec3 i2 = max( g.xyz, l.zxy );
-        vec3 x1 = x0 - i1 + C.xxx;
-        vec3 x2 = x0 - i2 + C.yyy;
-        vec3 x3 = x0 - D.yyy;
+        const vec2 C = vec2(1.0/6.0, 1.0/3.0); const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+        vec3 i = floor(v + dot(v, C.yyy)); vec3 x0 = v - i + dot(i, C.xxx);
+        vec3 g = step(x0.yzx, x0.xyz); vec3 l = 1.0 - g;
+        vec3 i1 = min(g.xyz, l.zxy); vec3 i2 = max(g.xyz, l.zxy);
+        vec3 x1 = x0 - i1 + C.xxx; vec3 x2 = x0 - i2 + C.yyy; vec3 x3 = x0 - D.yyy;
         i = mod289(i);
-        vec4 p = permute( permute( permute(
-          i.z + vec4(0.0, i1.z, i2.z, 1.0 ))
-          + i.y + vec4(0.0, i1.y, i2.y, 1.0 ))
-          + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));
-        float n_ = 1.0/7.0;
-        vec3 ns = n_ * D.wyz - D.xzx;
-        vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
-        vec4 x_ = floor(j * ns.z);
-        vec4 y_ = floor(j - 7.0 * x_ );
-        vec4 x = x_ *ns.x + ns.yyyy;
-        vec4 y = y_ *ns.x + ns.yyyy;
-        vec4 h = 1.0 - abs(x) - abs(y);
-        vec4 b0 = vec4( x.xy, y.xy );
-        vec4 b1 = vec4( x.zw, y.zw );
-        vec4 s0 = floor(b0)*2.0 + 1.0;
-        vec4 s1 = floor(b1)*2.0 + 1.0;
-        vec4 sh = -step(h, vec4(0.0));
-        vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;
-        vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;
-        vec3 p0 = vec3(a0.xy,h.x);
-        vec3 p1 = vec3(a0.zw,h.y);
-        vec3 p2 = vec3(a1.xy,h.z);
-        vec3 p3 = vec3(a1.zw,h.w);
+        vec4 p = permute(permute(permute(i.z + vec4(0.0, i1.z, i2.z, 1.0)) + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+        float n_ = 1.0/7.0; vec3 ns = n_ * D.wyz - D.xzx;
+        vec4 j = p - 49.0 * floor(p * ns.z * ns.z); vec4 x_ = floor(j * ns.z); vec4 y_ = floor(j - 7.0 * x_);
+        vec4 x = x_ *ns.x + ns.yyyy; vec4 y = y_ *ns.x + ns.yyyy; vec4 h = 1.0 - abs(x) - abs(y);
+        vec4 b0 = vec4(x.xy, y.xy); vec4 b1 = vec4(x.zw, y.zw);
+        vec4 s0 = floor(b0)*2.0 + 1.0; vec4 s1 = floor(b1)*2.0 + 1.0; vec4 sh = -step(h, vec4(0.0));
+        vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy; vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+        vec3 p0 = vec3(a0.xy,h.x); vec3 p1 = vec3(a0.zw,h.y); vec3 p2 = vec3(a1.xy,h.z); vec3 p3 = vec3(a1.zw,h.w);
         vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
-        p0 *= norm.x;
-        p1 *= norm.y;
-        p2 *= norm.z;
-        p3 *= norm.w;
+        p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
         vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
-        m = m * m;
-        return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3) ) );
+        m = m * m; return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
       }
-
       vec3 curlNoise(vec3 p) {
-        const float e = 0.1;
-        vec3 dx = vec3(e, 0.0, 0.0);
-        vec3 dy = vec3(0.0, e, 0.0);
-        vec3 dz = vec3(0.0, 0.0, e);
+        const float e = 0.1; vec3 dx = vec3(e, 0.0, 0.0); vec3 dy = vec3(0.0, e, 0.0); vec3 dz = vec3(0.0, 0.0, e);
         vec3 p_x0 = vec3(snoise(p - dx), snoise(p - dx + vec3(12.3)), snoise(p - dx + vec3(24.6)));
         vec3 p_x1 = vec3(snoise(p + dx), snoise(p + dx + vec3(12.3)), snoise(p + dx + vec3(24.6)));
         vec3 p_y0 = vec3(snoise(p - dy), snoise(p - dy + vec3(12.3)), snoise(p - dy + vec3(24.6)));
         vec3 p_y1 = vec3(snoise(p + dy), snoise(p + dy + vec3(12.3)), snoise(p + dy + vec3(24.6)));
         vec3 p_z0 = vec3(snoise(p - dz), snoise(p - dz + vec3(12.3)), snoise(p - dz + vec3(24.6)));
         vec3 p_z1 = vec3(snoise(p + dz), snoise(p + dz + vec3(12.3)), snoise(p + dz + vec3(24.6)));
-        float x = p_y1.z - p_y0.z - p_z1.y + p_z0.y;
-        float y = p_z1.x - p_z0.x - p_x1.z + p_x0.z;
-        float z = p_x1.y - p_x0.y - p_y1.x + p_y0.x;
+        float x = p_y1.z - p_y0.z - p_z1.y + p_z0.y; float y = p_z1.x - p_z0.x - p_x1.z + p_x0.z; float z = p_x1.y - p_x0.y - p_y1.x + p_y0.x;
         return normalize(vec3(x, y, z) / (2.0 * e));
       }
-
       void main() {
         vec2 uv = gl_FragCoord.xy / resolution.xy;
         vec3 pos = texture2D(texturePosition, uv).xyz;
         vec3 vel = texture2D(textureVelocity, uv).xyz;
-
         vec3 targetVel = curlNoise(pos * 0.002 + uTime * 0.2) * 2.0;
         vel += (targetVel - vel) * 0.05;
-
         float dist = distance(pos.xy, uMouse.xy);
         float maxDistance = 100.0; 
-
         if (dist < maxDistance) {
           vec2 dir = pos.xy - uMouse.xy;
           float force = (maxDistance - dist) / maxDistance;
           vel.xy += normalize(dir + 0.0001) * force * 20.0;
         }
-
         vel *= 0.95;
         gl_FragColor = vec4(vel, 1.0);
       }
@@ -496,36 +433,29 @@ function initGpuCompute() {
 
     positionVariable = gpuCompute.addVariable('texturePosition', positionFragmentShader, positionTexture)
     velocityVariable = gpuCompute.addVariable('textureVelocity', velocityFragmentShader, velocityTexture)
-
     gpuCompute.setVariableDependencies(positionVariable, [positionVariable, velocityVariable])
     gpuCompute.setVariableDependencies(velocityVariable, [positionVariable, velocityVariable])
 
     positionVariable.material.uniforms.uBounds = { value: new THREE.Vector3(window.innerWidth, window.innerHeight, 100) }
     positionVariable.material.uniforms.uTime = { value: 0.0 }
     positionVariable.material.uniforms.uDelta = { value: 0.016 }
-
     velocityVariable.material.uniforms.uBounds = { value: new THREE.Vector3(window.innerWidth, window.innerHeight, 100) };
     velocityVariable.material.uniforms.uDelta = { value: 0.016 };
     velocityVariable.material.uniforms.uTime = { value: 0.0 };
     velocityVariable.material.uniforms.uMouse = { value: fboMouse };
 
     const initError = gpuCompute.init()
-    if (initError) {
-      gpuCompute = null; positionVariable = null; velocityVariable = null;
-    }
+    if (initError) { gpuCompute = null; positionVariable = null; velocityVariable = null; }
   } catch {
     gpuCompute = null; positionVariable = null; velocityVariable = null;
   }
 }
-
 initGpuCompute()
 
 function initParticles() {
   if (!gpuCompute || !positionVariable) return
-
   const size = COMPUTE_SIZE
   const particlesCount = size * size
-
   const geometry = new THREE.BufferGeometry()
   const positions = new Float32Array(particlesCount * 3)
   const references = new Float32Array(particlesCount * 2)
@@ -544,7 +474,6 @@ function initParticles() {
     uniform sampler2D uPositionTexture;
     attribute vec2 reference;
     varying vec3 vPos;
-
     void main() {
       vec3 pos = texture2D(uPositionTexture, reference).xyz;
       vPos = pos; 
@@ -557,32 +486,21 @@ function initParticles() {
   const particlesFragmentShader = `
     uniform float uAlpha;
     varying vec3 vPos;
-
     void main() {
       vec2 c = gl_PointCoord - 0.5;
       float d = length(c);
       float mask = smoothstep(0.5, 0.35, d);
-
-      vec3 color1 = vec3(1.0, 0.84, 0.0); 
-      vec3 color2 = vec3(1.0, 0.55, 0.0);
-
+      vec3 color1 = vec3(1.0, 0.84, 0.0); vec3 color2 = vec3(1.0, 0.55, 0.0);
       float mixFactor = (vPos.x * 0.001) + (vPos.y * 0.001) + 0.5;
       vec3 finalColor = mix(color1, color2, clamp(mixFactor, 0.0, 1.0));
-
       gl_FragColor = vec4(finalColor, uAlpha * mask);
     }
   `
 
   pointsMaterial = new THREE.ShaderMaterial({
-    uniforms: {
-      uPositionTexture: { value: null },
-      uAlpha: { value: 0.85 },
-    },
-    vertexShader: particlesVertexShader,
-    fragmentShader: particlesFragmentShader,
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
+    uniforms: { uPositionTexture: { value: null }, uAlpha: { value: 0.85 } },
+    vertexShader: particlesVertexShader, fragmentShader: particlesFragmentShader,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
   })
 
   particles = new THREE.Points(geometry, pointsMaterial)
@@ -611,36 +529,22 @@ function createPlaceholderMeshes() {
     const geometry = new THREE.PlaneGeometry(rect.width, rect.height, 32, 32)
     const material = new THREE.ShaderMaterial({
       uniforms: {
-        uTexture: { value: null },
-        uVelocity: { value: 0 },
-        uHoverStrength: { value: 0 },
-        uMouse: { value: new THREE.Vector2(0.5, 0.5) },
-        uImageSize: { value: new THREE.Vector2(1, 1) },
+        uTexture: { value: null }, uVelocity: { value: 0 }, uHoverStrength: { value: 0 },
+        uMouse: { value: new THREE.Vector2(0.5, 0.5) }, 
+        uImageSize: { value: new THREE.Vector2(Math.max(rect.width, 1), Math.max(rect.height, 1)) }, // [BUG FIX]: Prevents 1x1 glitch
         uPlaneSize: { value: new THREE.Vector2(rect.width, rect.height) },
       },
-      vertexShader,
-      fragmentShader,
-      transparent: true,
+      vertexShader, fragmentShader, transparent: true,
     })
     const mesh = new THREE.Mesh(geometry, material)
-
     const imageUrl = element.dataset.image
+
     if (imageUrl) {
-      textureLoader.load(
-        imageUrl,
-        (texture) => {
-          if (texture.image) {
-            material.uniforms.uImageSize.value.set(
-              texture.image.width,
-              texture.image.height,
-            )
-          }
-          material.uniforms.uTexture.value = texture
-          material.needsUpdate = true
-        },
-        undefined,
-        () => { }
-      )
+      textureLoader.load(imageUrl, (texture) => {
+        if (texture.image) material.uniforms.uImageSize.value.set(texture.image.width, texture.image.height)
+        material.uniforms.uTexture.value = texture
+        material.needsUpdate = true
+      }, undefined, () => { })
     }
 
     scene.add(mesh)
@@ -652,16 +556,17 @@ const raycaster = new THREE.Raycaster()
 const pointerNDC = new THREE.Vector2(2, 2)
 let hoveredEntry = null
 
+// [BUG FIX]: Consolidated pointermove & mousemove listeners to prevent layout thrashing (getBoundingClientRect)
 window.addEventListener('pointermove', (event) => {
-  const rect = renderer.domElement.getBoundingClientRect()
-  pointerNDC.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
-  pointerNDC.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
-})
+  pointerScreen.x = event.clientX;
+  pointerScreen.y = event.clientY;
 
-window.addEventListener('mousemove', (event) => {
+  pointerNDC.x = (event.clientX / sizes.width) * 2 - 1;
+  pointerNDC.y = -(event.clientY / sizes.height) * 2 + 1;
+
   if (typeof fboMouse !== 'undefined') {
     fboMouse.x = event.clientX;
-    fboMouse.y = window.innerHeight - event.clientY; 
+    fboMouse.y = sizes.height - event.clientY;
     fboMouse.z = 0;
   }
 });
@@ -679,7 +584,6 @@ function updatePlaceholderMeshTransforms(scrollY = 0) {
 function onResize() {
   sizes.width = window.innerWidth
   sizes.height = window.innerHeight
-
   isMobile = window.innerWidth < 768
 
   camera.right = sizes.width
@@ -689,12 +593,14 @@ function onResize() {
   renderer.setSize(sizes.width, sizes.height)
   bloomComposer.setSize(sizes.width, sizes.height)
   finalComposer.setSize(sizes.width, sizes.height)
-  if (typeof bloomPass !== 'undefined') bloomPass.setSize(sizes.width, sizes.height)
+
+  if (typeof bloomPass !== 'undefined') {
+    bloomPass.setSize(new THREE.Vector2(sizes.width, sizes.height))
+  }
 
   if (positionVariable && positionVariable.material) {
     positionVariable.material.uniforms.uBounds.value.set(window.innerWidth, window.innerHeight, 100)
   }
-
   if (velocityVariable && velocityVariable.material) {
     velocityVariable.material.uniforms.uBounds.value.set(window.innerWidth, window.innerHeight, 100)
   }
@@ -704,18 +610,17 @@ function onResize() {
 }
 
 window.addEventListener('resize', onResize)
+
 createPlaceholderMeshes()
 updatePlaceholderMeshTransforms()
 
 const lenis = new Lenis()
-let currentScroll = 0
-let scrollVelocity = 0
-let smoothedVelocity = 0
-let lastRafTime = performance.now()
+let currentScroll = 0, scrollVelocity = 0, smoothedVelocity = 0, lastRafTime = performance.now()
 
 lenis.on('scroll', ({ scroll, velocity }) => {
   currentScroll = scroll
   scrollVelocity = velocity
+  ScrollTrigger.update(); // [BUG FIX]: Explicitly sync Lenis and GSAP clocks
 })
 
 const navButtons = document.querySelectorAll('[data-scroll-target]')
@@ -729,9 +634,7 @@ navButtons.forEach((button) => {
     if (!targetElement) return
 
     lenis.scrollTo(targetElement, {
-      offset: -80,
-      duration: 1.1,
-      easing: (t) => 1 - Math.pow(1 - t, 3),
+      offset: -80, duration: 1.1, easing: (t) => 1 - Math.pow(1 - t, 3),
     })
   })
 })
@@ -750,36 +653,27 @@ function raf(time) {
     updatePlaceholderMeshTransforms(currentScroll);
   }
 
-  // FIX 1: ZERO-MEMORY RAYCASTER (Stops scrolling lag)
   raycaster.setFromCamera(pointerNDC, camera);
-  let hoveredMesh = null;
-  for (let i = 0; i < placeholderMeshes.length; i++) {
-    const hits = raycaster.intersectObject(placeholderMeshes[i].mesh);
-    if (hits.length > 0) {
-      hoveredMesh = placeholderMeshes[i].mesh;
-      break; 
-    }
-  }
+  const intersects = raycaster.intersectObjects(placeholderMeshes.map(p => p.mesh));
 
-  placeholderMeshes.forEach(({ mesh }) => {
+  placeholderMeshes.forEach(({ element, mesh }) => {
     mesh.material.uniforms.uVelocity.value = smoothedVelocity;
-    
-    const isHovered = (mesh === hoveredMesh);
+
+    const isHovered = intersects.length > 0 && intersects[0].object === mesh;
     const targetHover = isHovered ? 1.0 : 0.0;
-    
     mesh.material.uniforms.uHoverStrength.value += (targetHover - mesh.material.uniforms.uHoverStrength.value) * 0.1;
-    mesh.material.uniforms.uMouse.value.set(
-      (pointerNDC.x * 0.5) + 0.5,
-      (pointerNDC.y * 0.5) + 0.5
-    );
+
+    // [BUG FIX]: Calculate mouse coordinates in local bounding box UV space instead of global screen space.
+    const rect = element.getBoundingClientRect();
+    const localX = (pointerScreen.x - rect.left) / Math.max(rect.width, 1.0);
+    const localY = (pointerScreen.y - rect.top) / Math.max(rect.height, 1.0);
+    mesh.material.uniforms.uMouse.value.set(localX, 1.0 - localY);
   });
 
   if (gpuCompute && positionVariable && velocityVariable) {
     velocityVariable.material.uniforms.uMouse.value.copy(fboMouse);
-
-    // FIX 2: Frame-independent physics update (Smooth on all monitors)
-    velocityVariable.material.uniforms.uTime.value += delta * 0.6;
-    positionVariable.material.uniforms.uTime.value += delta * 0.6;
+    velocityVariable.material.uniforms.uTime.value += 0.01;
+    positionVariable.material.uniforms.uTime.value += 0.01;
 
     gpuCompute.compute();
 
@@ -803,10 +697,92 @@ function raf(time) {
   requestAnimationFrame(raf);
 }
 
-// Initialize our custom tech cursor
 const cursor = initCursor()
 if (cursor && typeof cursor.setupMagnetic === 'function') {
   cursor.setupMagnetic()
 }
+
+// ============================================================
+// AI CHAT WIDGET LOGIC
+// ============================================================
+const chatToggleBtn = document.getElementById('ai-chat-toggle');
+const chatWindow = document.getElementById('ai-chat-window');
+const chatCloseBtn = document.getElementById('ai-chat-close');
+const chatInput = document.getElementById('ai-chat-input');
+const chatSendBtn = document.getElementById('ai-chat-send');
+const chatMessages = document.getElementById('ai-chat-messages');
+
+function toggleChat() {
+  chatWindow.classList.toggle('is-open');
+  document.body.classList.toggle('chat-open'); 
+
+  const cursorEl = document.querySelector('.tech-cursor');
+  if (cursorEl) {
+    cursorEl.style.opacity = document.body.classList.contains('chat-open') ? '0' : '1';
+  }
+}
+
+chatToggleBtn.addEventListener('click', toggleChat);
+chatCloseBtn.addEventListener('click', toggleChat);
+
+function appendMessage(role, text) {
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `chat-msg ${role}-msg`;
+  msgDiv.innerText = text;
+
+  const id = 'msg-' + Math.random().toString(36).substr(2, 9);
+  msgDiv.id = id;
+
+  chatMessages.appendChild(msgDiv);
+  chatMessages.scrollTop = chatMessages.scrollHeight; 
+  return id;
+}
+
+async function handleSendMessage() {
+  const text = chatInput.value.trim();
+  if (!text) return;
+
+  appendMessage('user', text);
+  chatInput.value = '';
+  chatInput.disabled = true;
+  chatSendBtn.disabled = true;
+
+  const loadingId = appendMessage('ai', 'Accessing AI core...');
+
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text })
+    });
+
+    const data = await response.json();
+    document.getElementById(loadingId).remove();
+
+    if (data.action && data.action === 'scrollTo') {
+      appendMessage('ai', `Affirmative. Navigating to ${data.target}...`);
+      const targetElement = document.querySelector(data.target);
+      if (targetElement && typeof lenis !== 'undefined') {
+        lenis.scrollTo(targetElement, { offset: -80, duration: 1.5, easing: (t) => 1 - Math.pow(1 - t, 3) });
+      }
+    } else {
+      appendMessage('ai', data.reply || "Error: No response.");
+    }
+
+  } catch (error) {
+    console.error('Chat Error:', error);
+    document.getElementById(loadingId).remove();
+    appendMessage('ai', 'Connection to AI core failed. Please try again.');
+  } finally {
+    chatInput.disabled = false;
+    chatSendBtn.disabled = false;
+    chatInput.focus();
+  }
+}
+
+chatSendBtn.addEventListener('click', handleSendMessage);
+chatInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') handleSendMessage();
+});
 
 raf(performance.now());
