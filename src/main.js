@@ -178,8 +178,8 @@ heroTimeline.to('.hero__subtitle .reveal-word', {
   ease: 'power4.out'
 }, '-=0.9');
 
-// Start the preloader and pass the timeline
-initPreloader(() => heroTimeline.play());
+// Start the preloader, then play the hero animation
+initPreloader().then(() => heroTimeline.play());
 
 // Section scroll animations
 document.querySelectorAll('.about, .skills, .experience, .projects').forEach((section) => {
@@ -620,6 +620,24 @@ window.addEventListener('pointermove', (event) => {
     fboMouse.z = 0;
   }
 })
+
+// [BUG FIX]: Touch event handling so particles respond on mobile
+window.addEventListener('touchmove', (event) => {
+  if (event.touches.length === 0) return;
+  const touch = event.touches[0];
+
+  pointerScreen.x = touch.clientX;
+  pointerScreen.y = touch.clientY;
+
+  pointerNDC.x = (touch.clientX / sizes.width) * 2 - 1;
+  pointerNDC.y = -(touch.clientY / sizes.height) * 2 + 1;
+
+  if (typeof fboMouse !== 'undefined') {
+    fboMouse.x = touch.clientX;
+    fboMouse.y = sizes.height - touch.clientY;
+    fboMouse.z = 0;
+  }
+}, { passive: true })
 
 function updatePlaceholderMeshTransforms(scrollY = 0) {
   const viewportHeight = sizes.height

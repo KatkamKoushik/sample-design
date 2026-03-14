@@ -639,6 +639,10 @@ button {
     min-height: 80vh;
   }
 
+  .hero__content {
+    max-width: 100%;
+  }
+
   .skills__grid {
     grid-template-columns: minmax(0, 1fr);
   }
