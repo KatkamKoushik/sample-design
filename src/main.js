@@ -709,6 +709,35 @@ window.addEventListener('pointermove', (event) => {
   }
 });
 
+
+
+const raycaster = new THREE.Raycaster()
+const pointerNDC = new THREE.Vector2(2, 2)
+
+function handleInput(event) {
+  if (event.pointerType === 'touch') {
+    const cursorEl = document.querySelector('.custom-cursor'); 
+    if (cursorEl) cursorEl.style.opacity = '0';
+  } else {
+    const cursorEl = document.querySelector('.custom-cursor');
+    if (cursorEl) cursorEl.style.opacity = '1';
+  }
+
+  const rect = renderer.domElement.getBoundingClientRect()
+  pointerNDC.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+  pointerNDC.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+
+  if (typeof fboMouse !== 'undefined') {
+    fboMouse.x = event.clientX;
+    fboMouse.y = window.innerHeight - event.clientY;
+    fboMouse.z = 0;
+  }
+}
+
+window.addEventListener('pointermove', handleInput);
+window.addEventListener('pointerdown', handleInput); 
+// ---------------------------------------
+
 function updatePlaceholderMeshTransforms(scrollY = 0) {
   const viewportHeight = sizes.height
 
