@@ -1,18 +1,173 @@
+import './style.css'
 import * as THREE from 'three'
+import Lenis from '@studio-freight/lenis'
+import gsap from 'gsap'
+import { initCursor } from './cursor.js'
+import { initPreloader } from './preloader.js'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { GPUComputationRenderer } from 'three/examples/jsm/misc/GPUComputationRenderer.js'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 
-// --- State & Config ---
+// Global variables
 let fboMouse = new THREE.Vector3(window.innerWidth / 2, window.innerHeight / 2, 0)
-const sizes = { width: window.innerWidth, height: window.innerHeight }
+const pointerNDC = new THREE.Vector2(2, 2)
 
-// --- Three.js Scene Setup ---
+const projects = [
+  { title: 'Simple Web Pages', tag: 'HTML / CSS', year: '2024', image: '/image.jpg', url: '#' },
+  { title: 'AI Automation Workflow', tag: 'AI / Automation', year: '2025', image: '/image2.jpg', url: '#' },
+]
+
+const app = document.querySelector('#app')
+
+// Removed AI Chat Widget HTML
+app.innerHTML = `
+<header class="site-header">
+  <div class="site-header__inner">
+    <a href="#top" class="site-header__logo">PS</a>
+    <nav class="site-header__nav" aria-label="Primary navigation">
+      <button class="site-header__link" type="button" data-scroll-target="#about">About</button>
+      <button class="site-header__link" type="button" data-scroll-target="#skills">Skills</button>
+      <button class="site-header__link" type="button" data-scroll-target="#projects">Projects</button>
+      <button class="site-header__link" type="button" data-scroll-target="#contact">Contact</button>
+    </nav>
+  </div>
+</header>
+
+<main class="page" id="top">
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero__content">
+      <p class="hero__eyebrow">Computer Science Student</p>
+      <h1 id="hero-title" class="hero__title">Pidugu Shivaram, building the web.</h1>
+      <p class="hero__subtitle">
+        Motivated B.Tech CSE student with a strong foundation in C, HTML, CSS, and SQL. Eager to contribute to web development and software projects while growing fast.
+      </p>
+    </div>
+  </section>
+
+  <section class="about" id="about" aria-labelledby="about-title">
+    <h2 id="about-title" class="section-label">About</h2>
+    <div class="about__content">
+      <h3 class="about__headline">Motivated problem-solver seeking to apply technical skills in real-world projects.</h3>
+      <p class="about__body">
+        I'm a 2nd-year B.Tech Computer Science Engineering student at Ku College of Engineering and Technology, Peddapalli, Telangana. I have a strong foundation in C programming, web technologies (HTML & CSS), and SQL databases. I'm eager to grow, learn fast, and deliver meaningful contributions in web development or software-related roles.
+      </p>
+    </div>
+  </section>
+
+  <section class="skills" id="skills" aria-labelledby="skills-title">
+    <h2 id="skills-title" class="section-label">Skills</h2>
+    <div class="skills__grid">
+      <article class="skills__card"><h3 class="skills__title">Programming Languages</h3><p class="skills__meta">C</p></article>
+      <article class="skills__card"><h3 class="skills__title">Web Technologies</h3><p class="skills__meta">HTML · CSS</p></article>
+      <article class="skills__card"><h3 class="skills__title">Database</h3><p class="skills__meta">SQL</p></article>
+      <article class="skills__card"><h3 class="skills__title">Tools & Platforms</h3><p class="skills__meta">VS Code · Git · GitHub · Microsoft Excel</p></article>
+    </div>
+  </section>
+
+  <section class="experience" aria-labelledby="experience-title">
+    <h2 id="experience-title" class="section-label">Education</h2>
+    <ul class="experience__list">
+      <li class="experience__item">
+        <span class="experience__label">B.Tech in Computer Science Engineering</span>
+        <span class="experience__meta">Ku College of Engineering & Technology · Currently 2nd Year · 2023–2027</span>
+      </li>
+    </ul>
+  </section>
+
+  <section class="projects" id="projects" aria-labelledby="projects-title">
+    <header class="projects__header">
+      <h2 id="projects-title" class="section-label">Selected projects</h2>
+      <p class="projects__subtitle">A selection of recent work spanning AI products, creative engineering, and full-stack platforms.</p>
+    </header>
+    <div class="projects__grid">
+      ${projects.map(p => `
+        <div class="project-card" data-url="${p.url}" aria-label="View project: ${p.title}" tabindex="0">
+          <div class="image-placeholder" data-image="${p.image}"></div>
+          <div class="project-card__info">
+            <span class="project-card__tag">${p.tag}</span>
+            <h3 class="project-card__title">${p.title}</h3>
+            <span class="project-card__year">${p.year}</span>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  </section>
+
+  <section class="contact" id="contact" aria-labelledby="contact-title">
+    <div class="contact__inner">
+      <div class="contact__copy">
+        <h2 id="contact-title" class="section-label">Contact</h2>
+        <p class="contact__headline">Let's collaborate on something meaningful.</p>
+        <p class="contact__body">Whether you're exploring an idea, looking for an internship opportunity, or curious about my work — feel free to reach out. Based in Peddapalli, Telangana · +91 9515546704</p>
+      </div>
+      <div class="contact__actions">
+        <a class="contact__email" href="mailto:pidugushivaram@gmail.com">pidugushivaram@gmail.com</a>
+        <div class="contact__buttons">
+          <a href="/resume.pdf" download class="button button--primary">Download Resume</a>
+          <div class="contact__links">
+            <a href="https://www.linkedin.com/in/shivarampidugu" target="_blank" rel="noreferrer">LinkedIn</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <footer class="footer">
+      <p class="footer__text">© ${new Date().getFullYear()} Pidugu Shivaram. All rights reserved.</p>
+    </footer>
+  </section>
+</main>
+`
+
+gsap.registerPlugin(ScrollTrigger)
+
+function splitWords(selector) {
+  const element = document.querySelector(selector);
+  if (!element) return;
+  const words = element.innerText.split(' ');
+  element.innerHTML = ''; 
+  words.forEach(word => {
+    const wrapper = document.createElement('span');
+    wrapper.style.cssText = 'overflow: hidden; display: inline-flex; padding-bottom: 0.1em; margin-right: 0.25em;';
+    const inner = document.createElement('span');
+    inner.style.cssText = 'display: inline-block; transform: translateY(110%);'; 
+    inner.className = 'reveal-word';
+    inner.innerText = word;
+    wrapper.appendChild(inner);
+    element.appendChild(wrapper);
+  });
+}
+
+splitWords('.hero__title');
+splitWords('.hero__subtitle');
+
+const heroTimeline = gsap.timeline({ paused: true });
+heroTimeline.from('.hero__eyebrow', { opacity: 0, duration: 1, ease: 'power3.inOut' });
+heroTimeline.to('.hero__title .reveal-word', { y: '0%', duration: 1.2, stagger: 0.04, ease: 'power4.out' }, '-=0.5');
+heroTimeline.to('.hero__subtitle .reveal-word', { y: '0%', duration: 1.0, stagger: 0.02, ease: 'power4.out' }, '-=0.9');
+
+if (typeof initPreloader === 'function') {
+  initPreloader(() => heroTimeline.play());
+} else {
+  heroTimeline.play();
+}
+
+document.querySelectorAll('.about, .skills, .experience, .projects').forEach((section) => {
+  gsap.from(section, {
+    y: 50, opacity: 0, duration: 1.1, ease: 'power3.out',
+    scrollTrigger: { trigger: section, start: 'top 80%', toggleActions: 'play none none reverse' },
+  })
+})
+
+const sizes = { width: window.innerWidth, height: window.innerHeight }
+let isMobile = window.innerWidth < 768
+
+// --- Three.js Setup ---
 const backgroundCanvas = document.createElement('canvas')
 backgroundCanvas.className = 'scene-canvas'
 document.body.appendChild(backgroundCanvas)
+document.body.style.backgroundColor = '#020617' // Required for Additive Blending
 
 const scene = new THREE.Scene()
 const camera = new THREE.OrthographicCamera(0, sizes.width, sizes.height, 0, -1000, 1000)
@@ -21,28 +176,31 @@ camera.position.z = 10
 const renderer = new THREE.WebGLRenderer({ canvas: backgroundCanvas, antialias: true, alpha: true })
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 renderer.setSize(sizes.width, sizes.height)
+renderer.setClearColor(0x000000, 0)
 
-// --- Post Processing (Bloom) ---
+// --- Post-processing (Selective Bloom) ---
 const BLOOM_LAYER = 1
 const bloomComposer = new EffectComposer(renderer)
 const finalComposer = new EffectComposer(renderer)
 
-bloomComposer.addPass(new RenderPass(scene, camera))
-
+const renderScene = new RenderPass(scene, camera)
 const bloomPass = new UnrealBloomPass(new THREE.Vector2(sizes.width, sizes.height), 1.8, 0.5, 0.8)
-bloomComposer.addPass(bloomPass)
+
 bloomComposer.renderToScreen = false
+bloomComposer.addPass(renderScene)
+bloomComposer.addPass(bloomPass)
 
 const finalPass = new ShaderPass({
   uniforms: { baseTexture: { value: null }, bloomTexture: { value: null } },
   vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: `uniform sampler2D baseTexture; uniform sampler2D bloomTexture; varying vec2 vUv; void main() { gl_FragColor = texture2D(baseTexture, vUv) + texture2D(bloomTexture, vUv); }`
 }, 'baseTexture')
+finalPass.needsSwap = true
 
-finalComposer.addPass(new RenderPass(scene, camera))
+finalComposer.addPass(renderScene)
 finalComposer.addPass(finalPass)
 
-// --- GPU Particles (FBO) ---
+// --- GPGPU Setup (Active Swirl) ---
 const COMPUTE_SIZE = 128
 let gpuCompute, positionVariable, velocityVariable, pointsMaterial
 
@@ -127,7 +285,6 @@ function initGpuCompute() {
       vec2 uv = gl_FragCoord.xy / resolution.xy;
       vec4 pos = texture2D(texturePosition, uv);
       vec4 vel = texture2D(textureVelocity, uv);
-      
       vec3 nextPos = pos.xyz + vel.xyz;
 
       if(nextPos.x < -100.0) nextPos.x = uBounds.x + 100.0;
@@ -143,7 +300,6 @@ function initGpuCompute() {
     ${noiseChunks}
     uniform vec3 uMouse;
     uniform float uTime;
-    
     void main() {
       vec2 uv = gl_FragCoord.xy / resolution.xy;
       vec3 pos = texture2D(texturePosition, uv).xyz;
@@ -159,12 +315,10 @@ function initGpuCompute() {
         float force = (300.0 - dist) / 300.0;
         vec3 normDir = normalize(dir);
         vec3 tangent = vec3(-normDir.y, normDir.x, 0.0);
-        
         vel += (tangent * 8.0 + normDir * 2.0) * force; 
       }
       
       vel *= 0.94;
-      
       gl_FragColor = vec4(vel, 1.0);
     }
   `, velTex)
@@ -181,7 +335,7 @@ function initGpuCompute() {
 
 initGpuCompute()
 
-// --- Particle Material & Mesh ---
+// --- Particle Mesh & Material (Disco Math) ---
 const particlesGeom = new THREE.BufferGeometry()
 const refs = new Float32Array(COMPUTE_SIZE * COMPUTE_SIZE * 2)
 
@@ -203,11 +357,9 @@ pointsMaterial = new THREE.ShaderMaterial({
     uniform sampler2D uPositionTexture; 
     attribute vec2 reference; 
     varying vec3 vPos;
-    
     void main() { 
       vec3 pos = texture2D(uPositionTexture, reference).xyz; 
       vPos = pos; 
-      
       gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0); 
       gl_PointSize = 4.0; 
     }`,
@@ -215,28 +367,18 @@ pointsMaterial = new THREE.ShaderMaterial({
     uniform float uAlpha; 
     uniform float uTime; 
     varying vec3 vPos; 
-    
     void main() { 
-      // 1. Get the distance from the center of the particle
       vec2 c = gl_PointCoord - 0.5; 
       float d = length(c); 
-      
-      // 2. Define the Aura (Soft fade from center to edge)
       float aura = smoothstep(0.5, 0.1, d);
-      
-      // 3. Define the Core (Sharp, tiny bright dot exactly in the middle)
       float core = smoothstep(0.15, 0.02, d); 
       
-      // 4. DISCO MATH (Your shifting colors)
       float r = 0.5 + 0.5 * sin(uTime * 2.0 + vPos.x * 0.005); 
       float g = 0.5 + 0.5 * sin(uTime * 3.0 + vPos.y * 0.005 + 2.0); 
       float b = 0.5 + 0.5 * sin(uTime * 1.5 + vPos.z * 0.005 + 4.0); 
       vec3 baseColor = vec3(r, g, b); 
       
-      // 5. Combine them: Color the aura, but make the core pure white
       vec3 finalColor = (baseColor * aura) + (vec3(1.0) * core);
-      
-      // 6. Set opacity based on the aura's fade
       gl_FragColor = vec4(finalColor, uAlpha * aura); 
     }
   `,
@@ -249,41 +391,192 @@ const particles = new THREE.Points(particlesGeom, pointsMaterial)
 particles.layers.set(BLOOM_LAYER) 
 scene.add(particles)
 
-// --- Interaction ---
-window.addEventListener('pointermove', (e) => {
-  fboMouse.x = e.clientX
-  fboMouse.y = sizes.height - e.clientY
+// --- Image Planes (Liquid Bend Effect) ---
+const placeholderMeshes = []
+const textureLoader = new THREE.TextureLoader()
+
+const planeVertexShader = `
+uniform float uVelocity;
+uniform float uHoverStrength;
+varying vec2 vUv;
+void main() {
+  vUv = uv;
+  vec3 transformed = position;
+  float strength = clamp(abs(uVelocity) * 0.6, 0.0, 1.0);
+  float edge = vUv.y - 0.5;
+  float curveProfile = edge * abs(edge); 
+  float bendY = -sign(uVelocity) * strength * curveProfile * 50.0;
+  float bendZ = strength * curveProfile * 140.0;
+  bendZ += uHoverStrength * 20.0;
+  transformed.y += bendY;
+  transformed.z += bendZ;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
+}
+`
+
+const planeFragmentShader = `
+uniform sampler2D uTexture;
+uniform vec2 uImageSize;
+uniform vec2 uPlaneSize;
+uniform vec2 uMouse;
+uniform float uHoverStrength;
+varying vec2 vUv;
+void main() {
+  float imageAspect = uImageSize.x / max(uImageSize.y, 0.001);
+  float planeAspect = uPlaneSize.x / max(uPlaneSize.y, 0.001);
+  vec2 uv = vUv;
+  if (imageAspect > planeAspect) {
+    float scale = planeAspect / imageAspect;
+    uv.x = (uv.x - 0.5) * scale + 0.5;
+  } else {
+    float scale = imageAspect / planeAspect;
+    uv.y = (uv.y - 0.5) * scale + 0.5;
+  }
+  float distToMouse = distance(uv, uMouse);
+  float radius = 0.35;
+  float hoverMask = smoothstep(radius, 0.0, distToMouse) * uHoverStrength;
+  vec2 direction = normalize(uv - uMouse);
+  direction = mix(direction, vec2(0.0, 0.0), 1.0 - hoverMask);
+  float maxShift = 0.025;
+  vec2 shift = direction * maxShift * hoverMask;
+  vec4 colorR = texture2D(uTexture, uv + shift * 0.7);
+  vec4 colorG = texture2D(uTexture, uv);
+  vec4 colorB = texture2D(uTexture, uv - shift * 0.7);
+  gl_FragColor = vec4(colorR.r, colorG.g, colorB.b, colorG.a);
+}
+`
+
+function createPlaceholderMeshes() {
+  placeholderMeshes.forEach(({ mesh }) => {
+    scene.remove(mesh)
+    mesh.geometry.dispose()
+    mesh.material.dispose()
+  })
+  placeholderMeshes.length = 0
+
+  document.querySelectorAll('.image-placeholder').forEach((element) => {
+    const rect = element.getBoundingClientRect()
+    const geometry = new THREE.PlaneGeometry(rect.width, rect.height, 32, 32)
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        uTexture: { value: null },
+        uVelocity: { value: 0 },
+        uHoverStrength: { value: 0 },
+        uMouse: { value: new THREE.Vector2(0.5, 0.5) },
+        uImageSize: { value: new THREE.Vector2(1, 1) },
+        uPlaneSize: { value: new THREE.Vector2(rect.width, rect.height) },
+      },
+      vertexShader: planeVertexShader,
+      fragmentShader: planeFragmentShader,
+      transparent: true,
+    })
+    
+    const mesh = new THREE.Mesh(geometry, material)
+    const imageUrl = element.dataset.image
+    if (imageUrl) {
+      textureLoader.load(imageUrl, (texture) => {
+        if (texture.image) {
+          material.uniforms.uImageSize.value.set(texture.image.width, texture.image.height)
+        }
+        material.uniforms.uTexture.value = texture
+        material.needsUpdate = true
+      })
+    }
+    scene.add(mesh)
+    placeholderMeshes.push({ element, mesh })
+  })
+}
+
+function updatePlaceholderMeshTransforms(scrollY = 0) {
+  placeholderMeshes.forEach(({ element, mesh }) => {
+    const rect = element.getBoundingClientRect()
+    const x = rect.left + rect.width / 2
+    const y = sizes.height - (rect.top + rect.height / 2)
+    mesh.position.set(x, y, 0)
+  })
+}
+
+// --- Events ---
+const raycaster = new THREE.Raycaster()
+
+window.addEventListener('pointermove', (event) => {
+  fboMouse.x = event.clientX
+  fboMouse.y = sizes.height - event.clientY
+  pointerNDC.x = (event.clientX / sizes.width) * 2 - 1
+  pointerNDC.y = -(event.clientY / sizes.height) * 2 + 1
 })
 
 window.addEventListener('resize', () => {
   sizes.width = window.innerWidth
   sizes.height = window.innerHeight
-  
+  isMobile = window.innerWidth < 768
+
   camera.right = sizes.width
   camera.top = sizes.height
   camera.updateProjectionMatrix()
-  
+
   renderer.setSize(sizes.width, sizes.height)
   bloomComposer.setSize(sizes.width, sizes.height)
   finalComposer.setSize(sizes.width, sizes.height)
   
-  if (positionVariable) {
-    positionVariable.material.uniforms.uBounds.value.set(sizes.width, sizes.height)
-  }
+  if (positionVariable) positionVariable.material.uniforms.uBounds.value.set(sizes.width, sizes.height)
+  
+  createPlaceholderMeshes()
+  updatePlaceholderMeshTransforms()
 })
 
-// --- Main Render Loop ---
+createPlaceholderMeshes()
+updatePlaceholderMeshTransforms()
+
+// --- Scroll & Loop ---
+const lenis = new Lenis()
+let currentScroll = 0
+let scrollVelocity = 0
+let smoothedVelocity = 0
+
+lenis.on('scroll', ({ scroll, velocity }) => {
+  currentScroll = scroll
+  scrollVelocity = velocity
+})
+
+document.querySelectorAll('[data-scroll-target]').forEach((button) => {
+  button.addEventListener('click', (event) => {
+    event.preventDefault()
+    const targetElement = document.querySelector(button.getAttribute('data-scroll-target'))
+    if (targetElement) {
+      lenis.scrollTo(targetElement, { offset: -80, duration: 1.1, easing: (t) => 1 - Math.pow(1 - t, 3) })
+    }
+  })
+})
+
+if (typeof initCursor === 'function') {
+  const cursor = initCursor()
+  if (cursor && typeof cursor.setupMagnetic === 'function') cursor.setupMagnetic()
+}
+
 const clock = new THREE.Clock()
 
-function raf() {
-  requestAnimationFrame(raf)
+function raf(time) {
+  if (lenis) lenis.raf(time)
   
   const elapsedTime = clock.getElapsedTime()
+  smoothedVelocity += ((isMobile ? 0 : scrollVelocity) - smoothedVelocity) * 0.16
+  
+  updatePlaceholderMeshTransforms(currentScroll)
 
-  if (gpuCompute && velocityVariable && positionVariable) {
+  raycaster.setFromCamera(pointerNDC, camera)
+  const intersects = raycaster.intersectObjects(placeholderMeshes.map(p => p.mesh))
+
+  placeholderMeshes.forEach(({ mesh }) => {
+    mesh.material.uniforms.uVelocity.value = smoothedVelocity
+    const isHovered = intersects.length > 0 && intersects[0].object === mesh
+    mesh.material.uniforms.uHoverStrength.value += ((isHovered ? 1.0 : 0.0) - mesh.material.uniforms.uHoverStrength.value) * 0.1
+    mesh.material.uniforms.uMouse.value.set((pointerNDC.x * 0.5) + 0.5, (pointerNDC.y * 0.5) + 0.5)
+  })
+
+  if (gpuCompute && positionVariable && velocityVariable) {
     velocityVariable.material.uniforms.uTime.value = elapsedTime
     gpuCompute.compute()
-    
     pointsMaterial.uniforms.uPositionTexture.value = gpuCompute.getCurrentRenderTarget(positionVariable).texture
     pointsMaterial.uniforms.uTime.value = elapsedTime
   }
@@ -291,12 +584,14 @@ function raf() {
   camera.layers.set(BLOOM_LAYER)
   bloomComposer.render()
   
-  if (finalPass) {
+  if (finalPass && finalPass.uniforms.bloomTexture) {
     finalPass.uniforms.bloomTexture.value = bloomComposer.readBuffer.texture
   }
   
   camera.layers.set(0)
   finalComposer.render()
+
+  requestAnimationFrame(raf)
 }
 
-raf()
+raf(performance.now())
