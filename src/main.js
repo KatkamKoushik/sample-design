@@ -330,7 +330,7 @@ function initParticles() {
   pointsMaterial = new THREE.ShaderMaterial({
     uniforms: { uPositionTexture: { value: null }, uAlpha: { value: 0.85 } },
     vertexShader: `uniform sampler2D uPositionTexture; attribute vec2 reference; varying vec3 vPos; void main() { vec3 pos = texture2D(uPositionTexture, reference).xyz; vPos = pos; vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0); gl_Position = projectionMatrix * mvPosition; gl_PointSize = 2.0; }`,
-    fragmentShader: `uniform float uAlpha; varying vec3 vPos; void main() { vec2 c = gl_PointCoord - 0.5; float d = length(c); float mask = smoothstep(0.5, 0.35, d); vec3 color1 = vec3(0.22, 0.74, 0.97); vec3 color2 = vec3(0.39, 0.40, 0.95); float mixFactor = (vPos.x * 0.001) + (vPos.y * 0.001) + 0.5; vec3 finalColor = mix(color1, color2, clamp(mixFactor, 0.0, 1.0)); gl_FragColor = vec4(finalColor, uAlpha * mask); }`,
+    fragmentShader: `uniform float uAlpha; varying vec3 vPos; void main() { vec2 c = gl_PointCoord - 0.5; float d = length(c); float mask = smoothstep(0.5, 0.35, d); vec3 color1 = vec3(1.0, 0.84, 0.0); vec3 color2 = vec3(1.0, 0.55, 0.0); float mixFactor = (vPos.x * 0.001) + (vPos.y * 0.001) + 0.5; vec3 finalColor = mix(color1, color2, clamp(mixFactor, 0.0, 1.0)); gl_FragColor = vec4(finalColor, uAlpha * mask); }`,
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
   })
 
