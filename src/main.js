@@ -335,7 +335,7 @@ finalComposer.addPass(finalPass)
 
 // --- FBO / GPGPU bootstrap ---
 // Dynamically set particle count (4,096 on mobile vs 16,384 on desktop)
-const COMPUTE_SIZE = isMobile ? 64 : 128;
+const COMPUTE_SIZE = isMobile ? 128 : 256;
 let gpuCompute = null
 let positionVariable = null
 let velocityVariable = null
