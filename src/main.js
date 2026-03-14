@@ -10,16 +10,16 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 
+// --- State & Config ---
 let fboMouse = new THREE.Vector3(0, 0, 0)
 let pointerScreen = new THREE.Vector2(window.innerWidth / 2, window.innerHeight / 2)
-
 const projects = [
-  { image: '/image.jpg',   url: '#' },
-  { image: '/image2.jpg',  url: '#' },
+  { image: '/image.jpg', url: '#' },
+  { image: '/image2.jpg', url: '#' },
 ]
 
+// --- UI Rendering ---
 const app = document.querySelector('#app')
-
 app.innerHTML = `
 <style>
   .lightbox {
@@ -72,40 +72,19 @@ app.innerHTML = `
     </div>
   </section>
 
-  <section class="about" id="about" aria-labelledby="about-title">
-    <h2 id="about-title" class="section-label">About</h2>
+  <section class="about" id="about">
+    <h2 class="section-label">About</h2>
     <div class="about__content">
       <h3 class="about__headline">Motivated problem-solver seeking to apply technical skills in real-world projects.</h3>
       <p class="about__body">
-        I'm a 2nd-year B.Tech Computer Science Engineering student at Ku College of Engineering and Technology, Peddapalli, Telangana. I have a strong foundation in C programming, web technologies (HTML & CSS), and SQL databases. I'm eager to grow, learn fast, and deliver meaningful contributions in web development or software-related roles.
+        I'm a 2nd-year B.Tech Computer Science Engineering student at Ku College of Engineering and Technology.
       </p>
     </div>
   </section>
 
-  <section class="skills" id="skills" aria-labelledby="skills-title">
-    <h2 id="skills-title" class="section-label">Skills</h2>
-    <div class="skills__grid">
-      <article class="skills__card"><h3 class="skills__title">Programming Languages</h3><p class="skills__meta">C</p></article>
-      <article class="skills__card"><h3 class="skills__title">Web Technologies</h3><p class="skills__meta">HTML · CSS</p></article>
-      <article class="skills__card"><h3 class="skills__title">Database</h3><p class="skills__meta">SQL</p></article>
-      <article class="skills__card"><h3 class="skills__title">Tools & Platforms</h3><p class="skills__meta">VS Code · Git · GitHub · Microsoft Excel</p></article>
-    </div>
-  </section>
-
-  <section class="experience" aria-labelledby="experience-title">
-    <h2 id="experience-title" class="section-label">Education</h2>
-    <ul class="experience__list">
-      <li class="experience__item">
-        <span class="experience__label">B.Tech in Computer Science Engineering</span>
-        <span class="experience__meta">Ku College of Engineering & Technology · Currently 2nd Year · 2023–2027</span>
-      </li>
-    </ul>
-  </section>
-
-  <section class="projects" id="projects" aria-labelledby="projects-title">
+  <section class="projects" id="projects">
     <header class="projects__header">
-      <h2 id="projects-title" class="section-label">Selected projects</h2>
-      <p class="projects__subtitle">A selection of recent work spanning AI products, creative engineering, and full-stack platforms.</p>
+      <h2 class="section-label">Selected projects</h2>
     </header>
     <div class="projects__grid">
       ${projects.map(p => `
@@ -116,61 +95,44 @@ app.innerHTML = `
     </div>
   </section>
 
-  <section class="contact" id="contact" aria-labelledby="contact-title">
+  <section class="contact" id="contact">
     <div class="contact__inner">
-      <div class="contact__copy">
-        <h2 id="contact-title" class="section-label">Contact</h2>
-        <p class="contact__headline">Let's collaborate on something meaningful.</p>
-        <p class="contact__body">Whether you're exploring an idea, looking for an internship opportunity, or curious about my work — feel free to reach out. Based in Peddapalli, Telangana · +91 9515546704</p>
-      </div>
-      <div class="contact__actions">
         <a class="contact__email" href="mailto:pidugushivaram@gmail.com">pidugushivaram@gmail.com</a>
-        <div class="contact__buttons">
-          <a href="/resume.pdf" download class="button button--primary">Download Resume</a>
-          <div class="contact__links">
-            <a href="https://www.linkedin.com/in/shivarampidugu" target="_blank" rel="noreferrer">LinkedIn</a>
-          </div>
-        </div>
-      </div>
+        <footer class="footer">
+          <p class="footer__text">© ${new Date().getFullYear()} Pidugu Shivaram.</p>
+        </footer>
     </div>
-    <footer class="footer">
-      <p class="footer__text">© ${new Date().getFullYear()} Pidugu Shivaram. All rights reserved.</p>
-    </footer>
   </section>
 </main>
 
 <div class="lightbox" id="lightbox">
   <div class="lightbox__backdrop" id="lightbox-close-bg"></div>
   <div class="lightbox__content">
-    <button class="lightbox__close" id="lightbox-close-btn" aria-label="Close">✕</button>
+    <button class="lightbox__close" id="lightbox-close-btn">✕</button>
     <img class="lightbox__image" id="lightbox-img" src="" alt="Project Expanded View" />
   </div>
 </div>
 `
 
+// --- GSAP & Scroll Setup ---
 gsap.registerPlugin(ScrollTrigger)
+const lenis = new Lenis()
+lenis.on('scroll', ScrollTrigger.update)
 
 function splitWords(selector) {
   const element = document.querySelector(selector);
   if (!element) return;
-
   const words = element.innerText.split(' ');
   element.innerHTML = ''; 
-
   words.forEach(word => {
     const wrapper = document.createElement('span');
-    wrapper.style.cssText = 'overflow: hidden; display: inline-flex; padding-bottom: 0.1em; margin-right: 0.25em; vertical-align: top; line-height: normal;';
-
+    wrapper.style.cssText = 'overflow: hidden; display: inline-flex; vertical-align: top; margin-right: 0.25em;';
     const inner = document.createElement('span');
     inner.style.cssText = 'display: inline-block; transform: translateY(110%);'; 
     inner.className = 'reveal-word';
     inner.innerText = word;
-
     wrapper.appendChild(inner);
     element.appendChild(wrapper);
-    
-    const space = document.createTextNode(' ');
-    element.appendChild(space);
   });
 }
 
@@ -178,389 +140,168 @@ splitWords('.hero__title');
 splitWords('.hero__subtitle');
 
 const heroTimeline = gsap.timeline({ paused: true });
+heroTimeline.from('.hero__eyebrow', { opacity: 0, duration: 1 })
+            .to('.hero__title .reveal-word', { y: '0%', duration: 1, stagger: 0.05 }, '-=0.5')
+            .to('.hero__subtitle .reveal-word', { y: '0%', duration: 0.8, stagger: 0.02 }, '-=0.8');
 
-heroTimeline.from('.hero__eyebrow', { opacity: 0, duration: 1, ease: 'power3.inOut' });
-heroTimeline.to('.hero__title .reveal-word', { y: '0%', duration: 1.2, stagger: 0.04, ease: 'power4.out' }, '-=0.5');
-heroTimeline.to('.hero__subtitle .reveal-word', { y: '0%', duration: 1.0, stagger: 0.02, ease: 'power4.out' }, '-=0.9');
-
+// Preloader
 let loadProgress = { val: 0 };
 gsap.to(loadProgress, {
-  val: 100, duration: 2.2, roundProps: "val",
+  val: 100, duration: 2, roundProps: "val",
   onUpdate: () => {
-    const countEl = document.querySelector('.preloader__count');
-    const barEl = document.querySelector('.preloader__bar');
-    if(countEl) countEl.innerText = loadProgress.val + '%';
-    if(barEl) barEl.style.width = loadProgress.val + '%';
+    document.querySelector('.preloader__count').innerText = loadProgress.val + '%';
+    document.querySelector('.preloader__bar').style.width = loadProgress.val + '%';
   },
   onComplete: () => {
-    gsap.to('.preloader', {
-      yPercent: -100, duration: 1.2, ease: 'power4.inOut',
-      onComplete: () => {
-        const p = document.querySelector('.preloader');
-        if (p) p.remove();
-        heroTimeline.play(); 
-      }
-    });
+    gsap.to('.preloader', { yPercent: -100, duration: 1, ease: 'power4.inOut', onComplete: () => heroTimeline.play() });
   }
 });
 
-document.querySelectorAll('.about, .skills, .experience, .projects').forEach((section) => {
-  gsap.from(section, {
-    y: 50, opacity: 0, duration: 1.1, ease: 'power3.out',
-    scrollTrigger: { trigger: section, start: 'top 80%', toggleActions: 'play none none reverse' },
-  })
-})
-
+// --- Three.js Scene Setup ---
 const backgroundCanvas = document.createElement('canvas')
 backgroundCanvas.className = 'scene-canvas'
 document.body.appendChild(backgroundCanvas)
 
 const scene = new THREE.Scene()
-
-const vertexShader = `
-uniform float uVelocity; uniform float uHoverStrength; varying vec2 vUv;
-void main() {
-  vUv = uv; vec3 transformed = position;
-  float strength = clamp(abs(uVelocity) * 0.6, 0.0, 1.0);
-  float edge = vUv.y - 0.5; float curveProfile = edge * abs(edge); 
-  float bendY = -sign(uVelocity) * strength * curveProfile * 50.0;
-  float bendZ = strength * curveProfile * 140.0; bendZ += uHoverStrength * 20.0;
-  transformed.y += bendY; transformed.z += bendZ;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
-}
-`
-
-const fragmentShader = `
-uniform sampler2D uTexture; uniform vec2 uImageSize; uniform vec2 uPlaneSize; uniform vec2 uMouse; uniform float uHoverStrength; varying vec2 vUv;
-void main() {
-  float imageAspect = uImageSize.x / max(uImageSize.y, 0.001);
-  float planeAspect = uPlaneSize.x / max(uPlaneSize.y, 0.001);
-  vec2 uv = vUv;
-  if (imageAspect > planeAspect) {
-    float scale = planeAspect / imageAspect; uv.x = (uv.x - 0.5) * scale + 0.5;
-  } else {
-    float scale = imageAspect / planeAspect; uv.y = (uv.y - 0.5) * scale + 0.5;
-  }
-  float distToMouse = distance(uv, uMouse);
-  float radius = 0.35;
-  float hoverMask = smoothstep(radius, 0.0, distToMouse) * uHoverStrength;
-  vec2 direction = normalize(uv - uMouse);
-  direction = mix(direction, vec2(0.0, 0.0), 1.0 - hoverMask);
-  vec2 shift = direction * 0.025 * hoverMask;
-  vec4 colorR = texture2D(uTexture, uv + shift * 0.7);
-  vec4 colorG = texture2D(uTexture, uv);
-  vec4 colorB = texture2D(uTexture, uv - shift * 0.7);
-  gl_FragColor = vec4(colorR.r, colorG.g, colorB.b, colorG.a);
-}
-`
-
 const sizes = { width: window.innerWidth, height: window.innerHeight }
-
-const isTouchDevice = window.matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window);
-let isMobile = window.innerWidth < 768 || isTouchDevice;
-
 const camera = new THREE.OrthographicCamera(0, sizes.width, sizes.height, 0, -1000, 1000)
 camera.position.z = 10
 
 const renderer = new THREE.WebGLRenderer({ canvas: backgroundCanvas, antialias: true, alpha: true });
-const maxPixelRatio = isMobile ? 1.5 : 2;
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxPixelRatio));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(sizes.width, sizes.height);
 
+// --- Post Processing ---
 const BLOOM_LAYER = 1;
 const bloomComposer = new EffectComposer(renderer);
 const finalComposer = new EffectComposer(renderer);
-const renderScene = new RenderPass(scene, camera);
 
-const bloomResX = isMobile ? sizes.width / 2 : sizes.width;
-const bloomResY = isMobile ? sizes.height / 2 : sizes.height;
+bloomComposer.addPass(new RenderPass(scene, camera));
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(sizes.width, sizes.height), 1.5, 0.4, 0.85);
+bloomComposer.addPass(bloomPass);
+bloomComposer.renderToScreen = false;
 
-const bloomPass = new UnrealBloomPass(new THREE.Vector2(bloomResX, bloomResY), 0.85, 0.95, 0.6);
-bloomComposer.renderToScreen = false
-bloomComposer.addPass(renderScene)
-bloomComposer.addPass(bloomPass)
+const finalPass = new ShaderPass({
+  uniforms: { baseTexture: { value: null }, bloomTexture: { value: null } },
+  vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `uniform sampler2D baseTexture; uniform sampler2D bloomTexture; varying vec2 vUv; void main() { gl_FragColor = texture2D(baseTexture, vUv) + texture2D(bloomTexture, vUv); }`
+}, 'baseTexture');
+finalComposer.addPass(new RenderPass(scene, camera));
+finalComposer.addPass(finalPass);
 
-const finalPass = new ShaderPass(
-  {
-    uniforms: { baseTexture: { value: null }, bloomTexture: { value: null } },
-    vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-    fragmentShader: `uniform sampler2D baseTexture; uniform sampler2D bloomTexture; varying vec2 vUv; void main() { vec4 base = texture2D(baseTexture, vUv); vec4 bloom = texture2D(bloomTexture, vUv); gl_FragColor = base + bloom; }`,
-  },
-  'baseTexture',
-)
-finalPass.needsSwap = true
-finalComposer.addPass(renderScene)
-finalComposer.addPass(finalPass)
-
-const COMPUTE_SIZE = isMobile ? 128 : 256;
-let gpuCompute = null, positionVariable = null, velocityVariable = null, particles = null, pointsMaterial = null
-
-function fillPositionTexture(texture) {
-  const data = texture.image.data
-  for (let i = 0; i < data.length; i += 4) {
-    data[i + 0] = Math.random() * window.innerWidth; data[i + 1] = Math.random() * window.innerHeight
-    data[i + 2] = (Math.random() - 0.5) * 100.0; data[i + 3] = 1.0
-  }
-}
-function fillVelocityTexture(texture) {
-  const data = texture.image.data
-  for (let i = 0; i < data.length; i += 4) { data[i] = 0; data[i+1] = 0; data[i+2] = 0; data[i+3] = 1; }
-}
+// --- GPU Particles ---
+const COMPUTE_SIZE = 128;
+let gpuCompute, positionVariable, velocityVariable, pointsMaterial;
 
 function initGpuCompute() {
-  try {
-    gpuCompute = new GPUComputationRenderer(COMPUTE_SIZE, COMPUTE_SIZE, renderer)
-    const positionTexture = gpuCompute.createTexture()
-    const velocityTexture = gpuCompute.createTexture()
-    fillPositionTexture(positionTexture); fillVelocityTexture(velocityTexture)
-
-    const posShader = `uniform vec3 uBounds; uniform float uDelta; uniform float uTime; void main() { vec2 uv = gl_FragCoord.xy / resolution.xy; vec4 pos = texture2D(texturePosition, uv); vec4 vel = texture2D(textureVelocity, uv); vec3 nextPos = pos.xyz + vel.xyz; vec3 center = vec3(uBounds.x * 0.5, uBounds.y * 0.5, 0.0); vec3 span = vec3(uBounds.x, uBounds.y, uBounds.z); float h = fract(sin(dot(uv + uTime * 0.01, vec2(12.9898, 78.233))) * 43758.5453); float h2 = fract(sin(dot(uv + vec2(4.123, 9.456) + uTime * 0.02, vec2(39.346, 11.135))) * 24634.6345); bool outX = abs(nextPos.x - center.x) > span.x * 1.25; bool outY = abs(nextPos.y - center.y) > span.y * 1.25; bool outZ = abs(nextPos.z) > span.z * 1.25; if (outX || outY || outZ) { nextPos = center + vec3((h - 0.5) * uBounds.x * 0.15, (h2 - 0.5) * uBounds.y * 0.15, (h - 0.5) * uBounds.z * 0.15); } gl_FragColor = vec4(nextPos, 1.0); }`
-    
-    const velShader = `uniform vec3 uMouse; uniform vec3 uBounds; uniform float uDelta; uniform float uTime; vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; } vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; } vec4 permute(vec4 x) { return mod289(((x*34.0)+10.0)*x); } vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; } float snoise(vec3 v) { const vec2 C = vec2(1.0/6.0, 1.0/3.0); const vec4 D = vec4(0.0, 0.5, 1.0, 2.0); vec3 i = floor(v + dot(v, C.yyy)); vec3 x0 = v - i + dot(i, C.xxx); vec3 g = step(x0.yzx, x0.xyz); vec3 l = 1.0 - g; vec3 i1 = min(g.xyz, l.zxy); vec3 i2 = max(g.xyz, l.zxy); vec3 x1 = x0 - i1 + C.xxx; vec3 x2 = x0 - i2 + C.yyy; vec3 x3 = x0 - D.yyy; i = mod289(i); vec4 p = permute(permute(permute(i.z + vec4(0.0, i1.z, i2.z, 1.0)) + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0)); float n_ = 1.0/7.0; vec3 ns = n_ * D.wyz - D.xzx; vec4 j = p - 49.0 * floor(p * ns.z * ns.z); vec4 x_ = floor(j * ns.z); vec4 y_ = floor(j - 7.0 * x_); vec4 x = x_ *ns.x + ns.yyyy; vec4 y = y_ *ns.x + ns.yyyy; vec4 h = 1.0 - abs(x) - abs(y); vec4 b0 = vec4(x.xy, y.xy); vec4 b1 = vec4(x.zw, y.zw); vec4 s0 = floor(b0)*2.0 + 1.0; vec4 s1 = floor(b1)*2.0 + 1.0; vec4 sh = -step(h, vec4(0.0)); vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy; vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww; vec3 p0 = vec3(a0.xy,h.x); vec3 p1 = vec3(a0.zw,h.y); vec3 p2 = vec3(a1.xy,h.z); vec3 p3 = vec3(a1.zw,h.w); vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3))); p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w; vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0); m = m * m; return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3))); } vec3 curlNoise(vec3 p) { const float e = 0.1; vec3 dx = vec3(e, 0.0, 0.0); vec3 dy = vec3(0.0, e, 0.0); vec3 dz = vec3(0.0, 0.0, e); vec3 p_x0 = vec3(snoise(p - dx), snoise(p - dx + vec3(12.3)), snoise(p - dx + vec3(24.6))); vec3 p_x1 = vec3(snoise(p + dx), snoise(p + dx + vec3(12.3)), snoise(p + dx + vec3(24.6))); vec3 p_y0 = vec3(snoise(p - dy), snoise(p - dy + vec3(12.3)), snoise(p - dy + vec3(24.6))); vec3 p_y1 = vec3(snoise(p + dy), snoise(p + dy + vec3(12.3)), snoise(p + dy + vec3(24.6))); vec3 p_z0 = vec3(snoise(p - dz), snoise(p - dz + vec3(12.3)), snoise(p - dz + vec3(24.6))); vec3 p_z1 = vec3(snoise(p + dz), snoise(p + dz + vec3(12.3)), snoise(p + dz + vec3(24.6))); float x = p_y1.z - p_y0.z - p_z1.y + p_z0.y; float y = p_z1.x - p_z0.x - p_x1.z + p_x0.z; float z = p_x1.y - p_x0.y - p_y1.x + p_y0.x; return normalize(vec3(x, y, z) / (2.0 * e)); } void main() { vec2 uv = gl_FragCoord.xy / resolution.xy; vec3 pos = texture2D(texturePosition, uv).xyz; vec3 vel = texture2D(textureVelocity, uv).xyz; vec3 targetVel = curlNoise(pos * 0.002 + uTime * 0.2) * 2.0; vel += (targetVel - vel) * 0.05; float dist = distance(pos.xy, uMouse.xy); float maxDistance = 100.0; if (dist < maxDistance) { vec2 dir = pos.xy - uMouse.xy; float force = (maxDistance - dist) / maxDistance; vel.xy += normalize(dir + 0.0001) * force * 20.0; } vel *= 0.95; gl_FragColor = vec4(vel, 1.0); }`
-
-    positionVariable = gpuCompute.addVariable('texturePosition', posShader, positionTexture)
-    velocityVariable = gpuCompute.addVariable('textureVelocity', velShader, velocityTexture)
-    gpuCompute.setVariableDependencies(positionVariable, [positionVariable, velocityVariable])
-    gpuCompute.setVariableDependencies(velocityVariable, [positionVariable, velocityVariable])
-
-    positionVariable.material.uniforms.uBounds = { value: new THREE.Vector3(sizes.width, sizes.height, 100) }
-    positionVariable.material.uniforms.uTime = { value: 0.0 }; positionVariable.material.uniforms.uDelta = { value: 0.016 }
-    velocityVariable.material.uniforms.uBounds = { value: new THREE.Vector3(sizes.width, sizes.height, 100) };
-    velocityVariable.material.uniforms.uDelta = { value: 0.016 }; velocityVariable.material.uniforms.uTime = { value: 0.0 };
-    velocityVariable.material.uniforms.uMouse = { value: fboMouse };
-
-    const initError = gpuCompute.init()
-    if (initError) { gpuCompute = null; positionVariable = null; velocityVariable = null; }
-  } catch { gpuCompute = null; positionVariable = null; velocityVariable = null; }
-}
-initGpuCompute()
-
-function initParticles() {
-  if (!gpuCompute || !positionVariable) return
-  const size = COMPUTE_SIZE, particlesCount = size * size
-  const geometry = new THREE.BufferGeometry()
-  const positions = new Float32Array(particlesCount * 3), references = new Float32Array(particlesCount * 2)
-
-  for (let i = 0; i < particlesCount; i++) {
-    references[i * 2] = ((i % size) + 0.5) / size; references[i * 2 + 1] = (Math.floor(i / size) + 0.5) / size
-  }
-  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-  geometry.setAttribute('reference', new THREE.BufferAttribute(references, 2))
-
-  pointsMaterial = new THREE.ShaderMaterial({
-    uniforms: { uPositionTexture: { value: null }, uAlpha: { value: 0.85 }, uTime: { value: 0.0 } },
-    vertexShader: `uniform sampler2D uPositionTexture; attribute vec2 reference; varying vec3 vPos; void main() { vec3 pos = texture2D(uPositionTexture, reference).xyz; vPos = pos; vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0); gl_Position = projectionMatrix * mvPosition; gl_PointSize = 2.0; }`,
-    fragmentShader: `uniform float uAlpha; uniform float uTime; varying vec3 vPos; void main() { vec2 c = gl_PointCoord - 0.5; float d = length(c); float mask = smoothstep(0.5, 0.35, d); float r = 0.5 + 0.5 * sin(uTime * 2.0 + vPos.x * 0.005); float g = 0.5 + 0.5 * sin(uTime * 3.0 + vPos.y * 0.005 + 2.0); float b = 0.5 + 0.5 * sin(uTime * 1.5 + vPos.z * 0.005 + 4.0); vec3 finalColor = vec3(r, g, b); gl_FragColor = vec4(finalColor, uAlpha * mask); }`,
-    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-  })
-
-  particles = new THREE.Points(geometry, pointsMaterial)
-  particles.frustumCulled = false; particles.position.z = -300; particles.layers.set(BLOOM_LAYER) 
-  scene.add(particles)
-}
-initParticles()
-
-const placeholderMeshes = []
-const textureLoader = new THREE.TextureLoader()
-
-const planeGeometry = new THREE.PlaneGeometry(1, 1, 32, 32) 
-
-function createPlaceholderMeshes() {
-  placeholderMeshes.forEach(({ mesh }) => {
-    scene.remove(mesh);
-    mesh.geometry.dispose();
-    mesh.material.dispose();
-  });
-  placeholderMeshes.length = 0;
-
-  document.querySelectorAll('.image-placeholder').forEach((element) => {
-    const rect = element.getBoundingClientRect()
-    
-    const material = new THREE.ShaderMaterial({
-      uniforms: {
-        uTexture: { value: null }, uVelocity: { value: 0 }, uHoverStrength: { value: 0 },
-        uMouse: { value: new THREE.Vector2(0.5, 0.5) }, uImageSize: { value: new THREE.Vector2(1, 1) },
-        uPlaneSize: { value: new THREE.Vector2(Math.max(rect.width, 1), Math.max(rect.height, 1)) },
-      },
-      vertexShader, fragmentShader, transparent: true,
-    })
-    
-    const mesh = new THREE.Mesh(planeGeometry, material)
-    const imageUrl = element.dataset.image
-    
-    if (imageUrl) {
-      material.uniforms.uImageSize.value.set(rect.width, rect.height)
-      textureLoader.load(imageUrl, (texture) => {
-        if (texture.image) material.uniforms.uImageSize.value.set(texture.image.width, texture.image.height)
-        material.uniforms.uTexture.value = texture
-        material.needsUpdate = true
-      })
-    }
-    scene.add(mesh)
-    placeholderMeshes.push({ element, mesh })
-  })
-}
-
-const raycaster = new THREE.Raycaster()
-const pointerNDC = new THREE.Vector2(2, 2)
-
-function handleInput(event) {
-  if (event.pointerType === 'touch') {
-    const cursorEl = document.querySelector('.tech-cursor'); if (cursorEl) cursorEl.style.opacity = '0';
-  } else {
-    const cursorEl = document.querySelector('.tech-cursor'); 
-    if (cursorEl && !document.body.classList.contains('lightbox-open')) {
-      cursorEl.style.opacity = '1';
-    }
-  }
-
-  pointerNDC.x = (event.clientX / sizes.width) * 2 - 1
-  pointerNDC.y = -(event.clientY / sizes.height) * 2 + 1
-  pointerScreen.x = event.clientX; pointerScreen.y = event.clientY;
-
-  if (typeof fboMouse !== 'undefined') {
-    fboMouse.x = event.clientX; fboMouse.y = sizes.height - event.clientY; fboMouse.z = 0;
-  }
-}
-
-window.addEventListener('pointermove', handleInput);
-window.addEventListener('pointerdown', handleInput);
-
-function updatePlaceholderMeshTransforms(scrollY = 0) {
-  placeholderMeshes.forEach(({ element, mesh }) => {
-    const rect = element.getBoundingClientRect()
-    mesh.scale.set(Math.max(rect.width, 1), Math.max(rect.height, 1), 1)
-    mesh.position.set(rect.left + rect.width / 2, sizes.height - (rect.top + rect.height / 2), 0)
-    mesh.material.uniforms.uPlaneSize.value.set(rect.width, rect.height)
-  })
-}
-
-function onResize() {
-  sizes.width = window.innerWidth; sizes.height = window.innerHeight
-  const touchCheck = window.matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window);
-  isMobile = window.innerWidth < 768 || touchCheck;
-
-  camera.right = sizes.width; camera.top = sizes.height; camera.updateProjectionMatrix()
-  renderer.setSize(sizes.width, sizes.height)
-  bloomComposer.setSize(sizes.width, sizes.height)
-  finalComposer.setSize(sizes.width, sizes.height)
+  gpuCompute = new GPUComputationRenderer(COMPUTE_SIZE, COMPUTE_SIZE, renderer);
+  const posTex = gpuCompute.createTexture();
+  const velTex = gpuCompute.createTexture();
   
-  if (typeof bloomPass !== 'undefined') {
-    bloomPass.setSize(isMobile ? sizes.width / 2 : sizes.width, isMobile ? sizes.height / 2 : sizes.height);
+  const posData = posTex.image.data;
+  for(let i=0; i<posData.length; i+=4) {
+    posData[i] = Math.random() * sizes.width;
+    posData[i+1] = Math.random() * sizes.height;
   }
 
-  if (positionVariable) positionVariable.material.uniforms.uBounds.value.set(sizes.width, sizes.height, 100)
-  if (velocityVariable) velocityVariable.material.uniforms.uBounds.value.set(sizes.width, sizes.height, 100)
-
-  createPlaceholderMeshes()
-  updatePlaceholderMeshTransforms()
-}
-window.addEventListener('resize', onResize)
-
-createPlaceholderMeshes()
-updatePlaceholderMeshTransforms()
-
-const lenis = new Lenis()
-let currentScroll = 0, scrollVelocity = 0, smoothedVelocity = 0, lastRafTime = performance.now()
-
-lenis.on('scroll', ({ scroll, velocity }) => { 
-  currentScroll = scroll; scrollVelocity = velocity; ScrollTrigger.update();
-})
-
-const lightbox = document.getElementById('lightbox');
-const lightboxImg = document.getElementById('lightbox-img');
-const closeBg = document.getElementById('lightbox-close-bg');
-const closeBtn = document.getElementById('lightbox-close-btn');
-
-document.querySelectorAll('.project-card').forEach(card => {
-  card.addEventListener('click', () => {
-    const imgEl = card.querySelector('.image-placeholder');
-    const imgSrc = imgEl.dataset.image;
-    if (imgSrc) {
-      lightboxImg.src = imgSrc;
-      lightbox.classList.add('is-active');
-      document.body.classList.add('lightbox-open'); 
-      lenis.stop(); 
-      
-      const cursorEl = document.querySelector('.tech-cursor');
-      if (cursorEl) cursorEl.style.opacity = '0';
+  positionVariable = gpuCompute.addVariable('texturePosition', `
+    void main() {
+      vec2 uv = gl_FragCoord.xy / resolution.xy;
+      vec4 pos = texture2D(texturePosition, uv);
+      vec4 vel = texture2D(textureVelocity, uv);
+      gl_FragColor = vec4(pos.xyz + vel.xyz, 1.0);
     }
-  });
+  `, posTex);
+
+  velocityVariable = gpuCompute.addVariable('textureVelocity', `
+    uniform vec3 uMouse;
+    void main() {
+      vec2 uv = gl_FragCoord.xy / resolution.xy;
+      vec3 pos = texture2D(texturePosition, uv).xyz;
+      vec3 vel = texture2D(textureVelocity, uv).xyz;
+      vec3 dir = normalize(pos - uMouse);
+      float dist = distance(pos.xy, uMouse.xy);
+      if(dist < 100.0) vel.xy += dir.xy * 0.5;
+      vel *= 0.96;
+      gl_FragColor = vec4(vel, 1.0);
+    }
+  `, velTex);
+
+  gpuCompute.setVariableDependencies(positionVariable, [positionVariable, velocityVariable]);
+  gpuCompute.setVariableDependencies(velocityVariable, [positionVariable, velocityVariable]);
+  velocityVariable.material.uniforms.uMouse = { value: fboMouse };
+  gpuCompute.init();
+}
+
+initGpuCompute();
+
+const particlesGeom = new THREE.BufferGeometry();
+const refs = new Float32Array(COMPUTE_SIZE * COMPUTE_SIZE * 2);
+for(let i=0; i<COMPUTE_SIZE*COMPUTE_SIZE; i++) {
+  refs[i*2] = (i % COMPUTE_SIZE) / COMPUTE_SIZE;
+  refs[i*2+1] = Math.floor(i / COMPUTE_SIZE) / COMPUTE_SIZE;
+}
+particlesGeom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(COMPUTE_SIZE*COMPUTE_SIZE*3), 3));
+particlesGeom.setAttribute('reference', new THREE.BufferAttribute(refs, 2));
+
+pointsMaterial = new THREE.ShaderMaterial({
+  uniforms: { uPositionTexture: { value: null }, uTime: { value: 0 } },
+  vertexShader: `uniform sampler2D uPositionTexture; attribute vec2 reference; void main() { vec3 pos = texture2D(uPositionTexture, reference).xyz; gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0); gl_PointSize = 2.0; }`,
+  fragmentShader: `void main() { gl_FragColor = vec4(0.5, 0.8, 1.0, 1.0); }`,
+  transparent: true, blending: THREE.AdditiveBlending
 });
 
-function closeLightbox() {
-  lightbox.classList.remove('is-active');
-  document.body.classList.remove('lightbox-open'); 
-  
-  setTimeout(() => { lightboxImg.src = ''; }, 300); 
-  lenis.start(); 
-  
-  if (window.matchMedia('(pointer: fine)').matches) {
-    const cursorEl = document.querySelector('.tech-cursor');
-    if (cursorEl) cursorEl.style.opacity = '1';
-  }
+const particles = new THREE.Points(particlesGeom, pointsMaterial);
+particles.layers.set(BLOOM_LAYER);
+scene.add(particles);
+
+// --- Image Meshes ---
+const placeholderMeshes = [];
+const texLoader = new THREE.TextureLoader();
+
+function createMeshes() {
+  document.querySelectorAll('.image-placeholder').forEach(el => {
+    const mat = new THREE.ShaderMaterial({
+      uniforms: { uTexture: { value: null }, uHoverStrength: { value: 0 }, uVelocity: { value: 0 } },
+      vertexShader: `varying vec2 vUv; uniform float uVelocity; void main() { vUv = uv; vec3 p = position; p.z += sin(uv.y * 3.14) * abs(uVelocity) * 10.0; gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0); }`,
+      fragmentShader: `varying vec2 vUv; uniform sampler2D uTexture; void main() { gl_FragColor = texture2D(uTexture, vUv); }`
+    });
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
+    texLoader.load(el.dataset.image, t => mat.uniforms.uTexture.value = t);
+    scene.add(mesh);
+    placeholderMeshes.push({ el, mesh });
+  });
 }
+createMeshes();
 
-closeBg.addEventListener('click', closeLightbox);
-closeBtn.addEventListener('click', closeLightbox);
-
-document.querySelectorAll('[data-scroll-target]').forEach((button) => {
-  button.addEventListener('click', (event) => {
-    event.preventDefault()
-    const targetElement = document.querySelector(button.getAttribute('data-scroll-target'))
-    if (!targetElement) return
-    lenis.scrollTo(targetElement, { offset: -80, duration: 1.1, easing: (t) => 1 - Math.pow(1 - t, 3) })
-  })
-})
-
+// --- Main Loop ---
 function raf(time) {
-  if (typeof lenis !== 'undefined' && lenis) lenis.raf(time);
-  lastRafTime = performance.now();
-  smoothedVelocity += ((isMobile ? 0 : scrollVelocity) - smoothedVelocity) * 0.16;
-
-  if (typeof updatePlaceholderMeshTransforms === 'function') updatePlaceholderMeshTransforms(currentScroll);
-
-  let intersects = [];
-  if (!isMobile && window.matchMedia('(hover: hover)').matches) {
-    raycaster.setFromCamera(pointerNDC, camera);
-    intersects = raycaster.intersectObjects(placeholderMeshes.map(p => p.mesh));
-  }
-
-  placeholderMeshes.forEach(({ element, mesh }) => {
-    mesh.material.uniforms.uVelocity.value = smoothedVelocity;
-    const isHovered = intersects.length > 0 && intersects[0].object === mesh;
-    mesh.material.uniforms.uHoverStrength.value += ((isHovered ? 1.0 : 0.0) - mesh.material.uniforms.uHoverStrength.value) * 0.1;
-    
-    const rect = element.getBoundingClientRect();
-    const localX = (pointerScreen.x - rect.left) / Math.max(rect.width, 1.0);
-    const localY = (pointerScreen.y - rect.top) / Math.max(rect.height, 1.0);
-    mesh.material.uniforms.uMouse.value.set(localX, 1.0 - localY);
+  lenis.raf(time);
+  
+  placeholderMeshes.forEach(({ el, mesh }) => {
+    const rect = el.getBoundingClientRect();
+    mesh.scale.set(rect.width, rect.height, 1);
+    mesh.position.set(rect.left + rect.width/2, sizes.height - (rect.top + rect.height/2), 0);
+    mesh.material.uniforms.uVelocity.value = lenis.velocity;
   });
 
-  if (gpuCompute && positionVariable && velocityVariable) {
-    velocityVariable.material.uniforms.uMouse.value.copy(fboMouse);
-    velocityVariable.material.uniforms.uTime.value += 0.01;
-    positionVariable.material.uniforms.uTime.value += 0.01;
-    
-    // Animate the particle colors
-    if (pointsMaterial) pointsMaterial.uniforms.uTime.value += 0.02; 
-    
-    gpuCompute.compute();
-    if (pointsMaterial) pointsMaterial.uniforms.uPositionTexture.value = gpuCompute.getCurrentRenderTarget(positionVariable).texture;
-  }
+  gpuCompute.compute();
+  pointsMaterial.uniforms.uPositionTexture.value = gpuCompute.getCurrentRenderTarget(positionVariable).texture;
 
-  if (typeof bloomComposer !== 'undefined' && typeof finalComposer !== 'undefined') {
-    camera.layers.set(BLOOM_LAYER); bloomComposer.render();
-    if (finalPass && finalPass.uniforms.bloomTexture) finalPass.uniforms.bloomTexture.value = bloomComposer.readBuffer.texture;
-    camera.layers.set(0); finalComposer.render();
-  }
-
+  camera.layers.set(BLOOM_LAYER);
+  bloomComposer.render();
+  finalPass.uniforms.bloomTexture.value = bloomComposer.readBuffer.texture;
+  
+  camera.layers.set(0);
+  finalComposer.render();
+  
   requestAnimationFrame(raf);
 }
 
-if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-  const cursor = initCursor()
-  if (cursor && typeof cursor.setupMagnetic === 'function') cursor.setupMagnetic()
-}
+window.addEventListener('pointermove', (e) => {
+  fboMouse.x = e.clientX;
+  fboMouse.y = sizes.height - e.clientY;
+});
 
 raf(performance.now());
+if (window.matchMedia('(hover: hover)').matches) initCursor();
