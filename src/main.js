@@ -260,7 +260,8 @@ const sizes = {
   height: window.innerHeight,
 }
 
-let isMobile = window.innerWidth < 768
+const isTouch = window.matchMedia('(pointer: coarse)').matches || 'ontouchstart' in navigator;
+isMobile = window.innerWidth < 768 || isTouch;
 
 const camera = new THREE.OrthographicCamera(
   0,
@@ -722,7 +723,8 @@ function updatePlaceholderMeshTransforms(scrollY = 0) {
 function onResize() {
   sizes.width = window.innerWidth
   sizes.height = window.innerHeight
-  isMobile = window.innerWidth < 768
+  const isTouch = window.matchMedia('(pointer: coarse)').matches || 'ontouchstart' in navigator;
+isMobile = window.innerWidth < 768 || isTouch;
 
   camera.right = sizes.width
   camera.top = sizes.height
