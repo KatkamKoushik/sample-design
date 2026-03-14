@@ -275,7 +275,14 @@ const sizes = {
   height: window.innerHeight,
 }
 
-let isMobile = window.innerWidth < 768
+const coarsePointerMedia = window.matchMedia('(hover: none), (pointer: coarse)')
+const reducedMotionMedia = window.matchMedia('(prefers-reduced-motion: reduce)')
+
+function isConstrainedDevice() {
+  return window.innerWidth < 900 || coarsePointerMedia.matches || reducedMotionMedia.matches
+}
+
+let isMobile = isConstrainedDevice()
 
 const camera = new THREE.OrthographicCamera(0, sizes.width, sizes.height, 0, -1000, 1000)
 camera.position.z = 10
@@ -285,7 +292,7 @@ const renderer = new THREE.WebGLRenderer({
   antialias: true,
   alpha: true,
 })
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.25 : 2))
 renderer.setSize(sizes.width, sizes.height)
 renderer.setClearColor(0x000000, 0)
 
@@ -338,8 +345,8 @@ finalComposer.addPass(finalPass)
 
 // --- FBO / GPGPU bootstrap ---
 function getComputeSize() {
+  if (isMobile) return 96
   const w = window.innerWidth
-  if (w < 768) return 96          // mobile
   if (w < 1024) return 160        // tablet
   if (w < 1440) return 196        // laptop
   return 236                      // desktop
@@ -676,12 +683,13 @@ function disposeGpuCompute() {
 function onResize() {
   sizes.width = window.innerWidth
   sizes.height = window.innerHeight
-  isMobile = window.innerWidth < 768
+  isMobile = isConstrainedDevice()
 
   camera.right = sizes.width
   camera.top = sizes.height
   camera.updateProjectionMatrix()
 
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.25 : 2))
   renderer.setSize(sizes.width, sizes.height)
   bloomComposer.setSize(sizes.width, sizes.height)
   finalComposer.setSize(sizes.width, sizes.height)
@@ -764,20 +772,22 @@ function raf(time) {
   }
 
   raycaster.setFromCamera(pointerNDC, camera);
-  const intersects = raycaster.intersectObjects(placeholderMeshes.map(p => p.mesh));
+  const intersects = isMobile ? [] : raycaster.intersectObjects(placeholderMeshes.map(p => p.mesh));
 
   placeholderMeshes.forEach(({ element, mesh }) => {
     mesh.material.uniforms.uVelocity.value = smoothedVelocity;
 
-    const isHovered = intersects.length > 0 && intersects[0].object === mesh;
+    const isHovered = !isMobile && intersects.length > 0 && intersects[0].object === mesh;
     const targetHover = isHovered ? 1.0 : 0.0;
     mesh.material.uniforms.uHoverStrength.value += (targetHover - mesh.material.uniforms.uHoverStrength.value) * 0.1;
 
-    // [BUG FIX]: Map the mouse directly to the local bounding box UV space instead of using global NDC
-    const rect = element.getBoundingClientRect();
-    const localX = (pointerScreen.x - rect.left) / Math.max(rect.width, 1.0);
-    const localY = (pointerScreen.y - rect.top) / Math.max(rect.height, 1.0);
-    mesh.material.uniforms.uMouse.value.set(localX, 1.0 - localY);
+    if (!isMobile) {
+      // [BUG FIX]: Map the mouse directly to the local bounding box UV space instead of using global NDC
+      const rect = element.getBoundingClientRect();
+      const localX = (pointerScreen.x - rect.left) / Math.max(rect.width, 1.0);
+      const localY = (pointerScreen.y - rect.top) / Math.max(rect.height, 1.0);
+      mesh.material.uniforms.uMouse.value.set(localX, 1.0 - localY);
+    }
   });
 
   if (gpuCompute && positionVariable && velocityVariable) {
@@ -792,7 +802,11 @@ function raf(time) {
     }
   }
 
-  if (typeof bloomComposer !== 'undefined' && typeof finalComposer !== 'undefined') {
+  if (isMobile) {
+    camera.layers.enableAll()
+    renderer.render(scene, camera)
+    camera.layers.set(0)
+  } else if (typeof bloomComposer !== 'undefined' && typeof finalComposer !== 'undefined') {
     camera.layers.set(BLOOM_LAYER);
     bloomComposer.render();
 

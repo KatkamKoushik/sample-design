@@ -68,6 +68,7 @@ body {
   background: radial-gradient(ellipse at top, #1e293b 0%, var(--color-bg) 60%);
   color: var(--color-text);
   min-height: 100vh;
+  min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
@@ -203,6 +204,7 @@ button {
   inset: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   display: block;
   z-index: 9;
   pointer-events: none;
@@ -229,6 +231,7 @@ button {
    ============================================================ */
 .hero {
   min-height: 90vh;
+  min-height: 90dvh;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -637,6 +640,7 @@ button {
 
   .hero {
     min-height: 80vh;
+    min-height: 80dvh;
   }
 
   .hero__content {
@@ -667,6 +671,13 @@ button {
 
   .experience__meta {
     text-align: left;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .hero {
+    min-height: min(78vh, 44rem);
+    min-height: min(78dvh, 44rem);
   }
 }
 
