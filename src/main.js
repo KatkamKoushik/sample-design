@@ -20,31 +20,7 @@ const projects = [
 
 const app = document.querySelector('#app')
 
-// [FEATURE ADDED]: Injected Lightbox CSS and DOM structure directly into the template
 app.innerHTML = `
-<style>
-  .lightbox {
-    position: fixed; inset: 0; z-index: 99999;
-    display: flex; align-items: center; justify-content: center;
-    opacity: 0; pointer-events: none; visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
-  }
-  .lightbox.is-active { opacity: 1; pointer-events: auto; visibility: visible; }
-  .lightbox__backdrop {
-    position: absolute; inset: 0; background: rgba(2, 6, 23, 0.95); 
-    backdrop-filter: blur(10px); cursor: pointer;
-  }
-  .lightbox__content { position: relative; z-index: 1; max-width: 90vw; max-height: 90vh; }
-  .lightbox__image {
-    max-width: 100%; max-height: 85vh; object-fit: contain;
-    border-radius: 8px; box-shadow: 0 24px 48px rgba(0,0,0,0.5);
-  }
-  .lightbox__close {
-    position: absolute; top: -40px; right: 0; background: transparent; 
-    border: none; color: #fff; font-size: 2rem; cursor: pointer; padding: 0.5rem; line-height: 1;
-  }
-</style>
-
 <div class="preloader">
   <div class="preloader__count">0%</div>
   <div class="preloader__bar"></div>
@@ -110,7 +86,7 @@ app.innerHTML = `
     </header>
     <div class="projects__grid">
       ${projects.map(p => `
-        <div class="project-card" data-url="${p.url}" style="cursor: pointer;">
+        <div class="project-card" data-url="${p.url}">
           <div class="image-placeholder" data-image="${p.image}"></div>
         </div>
       `).join('')}
@@ -160,7 +136,6 @@ function splitWords(selector) {
 
   words.forEach(word => {
     const wrapper = document.createElement('span');
-    // [BUG FIX]: Added 'vertical-align: top' and 'line-height: normal' to stop mobile word collision when viewport scales
     wrapper.style.cssText = 'overflow: hidden; display: inline-flex; padding-bottom: 0.1em; margin-right: 0.25em; vertical-align: top; line-height: normal;';
 
     const inner = document.createElement('span');
@@ -258,10 +233,10 @@ void main() {
 
 const sizes = { width: window.innerWidth, height: window.innerHeight }
 
+// Hardware check ensures mobile logic triggers accurately
 const isTouchDevice = window.matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window);
 let isMobile = window.innerWidth < 768 || isTouchDevice;
 
-// [BUG FIX]: Ensuring Orthographic camera bounds exactly match screen pixel coordinates to prevent mesh drift.
 const camera = new THREE.OrthographicCamera(0, sizes.width, sizes.height, 0, -1000, 1000)
 camera.position.z = 10
 
@@ -295,7 +270,9 @@ finalPass.needsSwap = true
 finalComposer.addPass(renderScene)
 finalComposer.addPass(finalPass)
 
-let COMPUTE_SIZE = isMobile ? 128 : 256;
+// [MEMORY LEAK 2 FIXED]: We define the COMPUTE_SIZE strictly once on load. 
+// We DO NOT destroy and rebuild 65,000 particles every time the user resizes the window!
+const COMPUTE_SIZE = isMobile ? 128 : 256;
 let gpuCompute = null, positionVariable = null, velocityVariable = null, particles = null, pointsMaterial = null
 
 function fillPositionTexture(texture) {
@@ -366,11 +343,17 @@ initParticles()
 const placeholderMeshes = []
 const textureLoader = new THREE.TextureLoader()
 
-// [BUG FIX]: The massive image scaling bug was caused by passing DOM rect dimensions into the base geometry.
-// This enforces a strict 1x1 unit base, which we multiply strictly by CSS size in the loop later.
 const planeGeometry = new THREE.PlaneGeometry(1, 1, 32, 32) 
 
 function createPlaceholderMeshes() {
+  // [MEMORY LEAK 1 FIXED]: Added back the critical cleanup loop so we don't duplicate meshes!
+  placeholderMeshes.forEach(({ mesh }) => {
+    scene.remove(mesh);
+    mesh.geometry.dispose();
+    mesh.material.dispose();
+  });
+  placeholderMeshes.length = 0;
+
   document.querySelectorAll('.image-placeholder').forEach((element) => {
     const rect = element.getBoundingClientRect()
     
@@ -406,7 +389,11 @@ function handleInput(event) {
   if (event.pointerType === 'touch') {
     const cursorEl = document.querySelector('.tech-cursor'); if (cursorEl) cursorEl.style.opacity = '0';
   } else {
-    const cursorEl = document.querySelector('.tech-cursor'); if (cursorEl) cursorEl.style.opacity = '1';
+    // Only show custom cursor if the lightbox is NOT active
+    const cursorEl = document.querySelector('.tech-cursor'); 
+    if (cursorEl && !document.body.classList.contains('lightbox-open')) {
+      cursorEl.style.opacity = '1';
+    }
   }
 
   pointerNDC.x = (event.clientX / sizes.width) * 2 - 1
@@ -424,7 +411,6 @@ window.addEventListener('pointerdown', handleInput);
 function updatePlaceholderMeshTransforms(scrollY = 0) {
   placeholderMeshes.forEach(({ element, mesh }) => {
     const rect = element.getBoundingClientRect()
-    // [BUG FIX]: Scale safely calculates from the 1x1 geometry to map exactly to the CSS bounds.
     mesh.scale.set(Math.max(rect.width, 1), Math.max(rect.height, 1), 1)
     mesh.position.set(rect.left + rect.width / 2, sizes.height - (rect.top + rect.height / 2), 0)
     mesh.material.uniforms.uPlaneSize.value.set(rect.width, rect.height)
@@ -434,15 +420,8 @@ function updatePlaceholderMeshTransforms(scrollY = 0) {
 function onResize() {
   sizes.width = window.innerWidth; sizes.height = window.innerHeight
   const touchCheck = window.matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window);
-  const newIsMobile = window.innerWidth < 768 || touchCheck;
+  isMobile = window.innerWidth < 768 || touchCheck;
 
-  if (newIsMobile !== isMobile) {
-    isMobile = newIsMobile; COMPUTE_SIZE = isMobile ? 128 : 256;
-    if (particles) { scene.remove(particles); particles.geometry.dispose(); particles.material.dispose(); }
-    initGpuCompute(); initParticles();
-  }
-
-  // Ensure camera perfectly maps to new layout dimensions
   camera.right = sizes.width; camera.top = sizes.height; camera.updateProjectionMatrix()
   renderer.setSize(sizes.width, sizes.height)
   bloomComposer.setSize(sizes.width, sizes.height)
@@ -455,6 +434,8 @@ function onResize() {
   if (positionVariable) positionVariable.material.uniforms.uBounds.value.set(sizes.width, sizes.height, 100)
   if (velocityVariable) velocityVariable.material.uniforms.uBounds.value.set(sizes.width, sizes.height, 100)
 
+  // Cleanly rebuild meshes without leaking memory
+  createPlaceholderMeshes()
   updatePlaceholderMeshTransforms()
 }
 window.addEventListener('resize', onResize)
@@ -469,7 +450,7 @@ lenis.on('scroll', ({ scroll, velocity }) => {
   currentScroll = scroll; scrollVelocity = velocity; ScrollTrigger.update();
 })
 
-// [FEATURE ADDED]: Lightbox / Image Enlarge Event Handlers
+// --- LIGHTBOX INTERACTION LOGIC ---
 const lightbox = document.getElementById('lightbox');
 const lightboxImg = document.getElementById('lightbox-img');
 const closeBg = document.getElementById('lightbox-close-bg');
@@ -482,15 +463,28 @@ document.querySelectorAll('.project-card').forEach(card => {
     if (imgSrc) {
       lightboxImg.src = imgSrc;
       lightbox.classList.add('is-active');
-      lenis.stop(); // Lock scrolling while viewing image
+      document.body.classList.add('lightbox-open'); // Tells CSS to restore system cursor!
+      lenis.stop(); 
+      
+      // Hide the custom tech cursor so it doesn't get stuck under the lightbox
+      const cursorEl = document.querySelector('.tech-cursor');
+      if (cursorEl) cursorEl.style.opacity = '0';
     }
   });
 });
 
 function closeLightbox() {
   lightbox.classList.remove('is-active');
-  setTimeout(() => { lightboxImg.src = ''; }, 300); // Clear source after fade out
-  lenis.start(); // Unlock scrolling
+  document.body.classList.remove('lightbox-open'); // Re-hides system cursor
+  
+  setTimeout(() => { lightboxImg.src = ''; }, 300); 
+  lenis.start(); 
+  
+  // Bring custom cursor back
+  if (window.matchMedia('(pointer: fine)').matches) {
+    const cursorEl = document.querySelector('.tech-cursor');
+    if (cursorEl) cursorEl.style.opacity = '1';
+  }
 }
 
 closeBg.addEventListener('click', closeLightbox);
