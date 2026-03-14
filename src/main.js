@@ -21,6 +21,29 @@ const projects = [
 const app = document.querySelector('#app')
 
 app.innerHTML = `
+<style>
+  .lightbox {
+    position: fixed; inset: 0; z-index: 99999;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+  .lightbox.is-active { opacity: 1; pointer-events: auto; visibility: visible; }
+  .lightbox__backdrop {
+    position: absolute; inset: 0; background: rgba(2, 6, 23, 0.95); 
+    backdrop-filter: blur(10px); cursor: pointer;
+  }
+  .lightbox__content { position: relative; z-index: 1; max-width: 90vw; max-height: 90vh; }
+  .lightbox__image {
+    max-width: 100%; max-height: 85vh; object-fit: contain;
+    border-radius: 8px; box-shadow: 0 24px 48px rgba(0,0,0,0.5);
+  }
+  .lightbox__close {
+    position: absolute; top: -40px; right: 0; background: transparent; 
+    border: none; color: #fff; font-size: 2rem; cursor: pointer; padding: 0.5rem; line-height: 1;
+  }
+</style>
+
 <div class="preloader">
   <div class="preloader__count">0%</div>
   <div class="preloader__bar"></div>
@@ -86,7 +109,7 @@ app.innerHTML = `
     </header>
     <div class="projects__grid">
       ${projects.map(p => `
-        <div class="project-card" data-url="${p.url}">
+        <div class="project-card" data-url="${p.url}" style="cursor: pointer;">
           <div class="image-placeholder" data-image="${p.image}"></div>
         </div>
       `).join('')}
@@ -233,7 +256,6 @@ void main() {
 
 const sizes = { width: window.innerWidth, height: window.innerHeight }
 
-// Hardware check ensures mobile logic triggers accurately
 const isTouchDevice = window.matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window);
 let isMobile = window.innerWidth < 768 || isTouchDevice;
 
@@ -270,8 +292,6 @@ finalPass.needsSwap = true
 finalComposer.addPass(renderScene)
 finalComposer.addPass(finalPass)
 
-// [MEMORY LEAK 2 FIXED]: We define the COMPUTE_SIZE strictly once on load. 
-// We DO NOT destroy and rebuild 65,000 particles every time the user resizes the window!
 const COMPUTE_SIZE = isMobile ? 128 : 256;
 let gpuCompute = null, positionVariable = null, velocityVariable = null, particles = null, pointsMaterial = null
 
@@ -328,9 +348,9 @@ function initParticles() {
   geometry.setAttribute('reference', new THREE.BufferAttribute(references, 2))
 
   pointsMaterial = new THREE.ShaderMaterial({
-    uniforms: { uPositionTexture: { value: null }, uAlpha: { value: 0.85 } },
+    uniforms: { uPositionTexture: { value: null }, uAlpha: { value: 0.85 }, uTime: { value: 0.0 } },
     vertexShader: `uniform sampler2D uPositionTexture; attribute vec2 reference; varying vec3 vPos; void main() { vec3 pos = texture2D(uPositionTexture, reference).xyz; vPos = pos; vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0); gl_Position = projectionMatrix * mvPosition; gl_PointSize = 2.0; }`,
-    fragmentShader: `uniform float uAlpha; varying vec3 vPos; void main() { vec2 c = gl_PointCoord - 0.5; float d = length(c); float mask = smoothstep(0.5, 0.35, d); vec3 color1 = vec3(1.0, 0.84, 0.0); vec3 color2 = vec3(1.0, 0.55, 0.0); float mixFactor = (vPos.x * 0.001) + (vPos.y * 0.001) + 0.5; vec3 finalColor = mix(color1, color2, clamp(mixFactor, 0.0, 1.0)); gl_FragColor = vec4(finalColor, uAlpha * mask); }`,
+    fragmentShader: `uniform float uAlpha; uniform float uTime; varying vec3 vPos; void main() { vec2 c = gl_PointCoord - 0.5; float d = length(c); float mask = smoothstep(0.5, 0.35, d); float r = 0.5 + 0.5 * sin(uTime * 2.0 + vPos.x * 0.005); float g = 0.5 + 0.5 * sin(uTime * 3.0 + vPos.y * 0.005 + 2.0); float b = 0.5 + 0.5 * sin(uTime * 1.5 + vPos.z * 0.005 + 4.0); vec3 finalColor = vec3(r, g, b); gl_FragColor = vec4(finalColor, uAlpha * mask); }`,
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
   })
 
@@ -346,7 +366,6 @@ const textureLoader = new THREE.TextureLoader()
 const planeGeometry = new THREE.PlaneGeometry(1, 1, 32, 32) 
 
 function createPlaceholderMeshes() {
-  // [MEMORY LEAK 1 FIXED]: Added back the critical cleanup loop so we don't duplicate meshes!
   placeholderMeshes.forEach(({ mesh }) => {
     scene.remove(mesh);
     mesh.geometry.dispose();
@@ -389,7 +408,6 @@ function handleInput(event) {
   if (event.pointerType === 'touch') {
     const cursorEl = document.querySelector('.tech-cursor'); if (cursorEl) cursorEl.style.opacity = '0';
   } else {
-    // Only show custom cursor if the lightbox is NOT active
     const cursorEl = document.querySelector('.tech-cursor'); 
     if (cursorEl && !document.body.classList.contains('lightbox-open')) {
       cursorEl.style.opacity = '1';
@@ -434,7 +452,6 @@ function onResize() {
   if (positionVariable) positionVariable.material.uniforms.uBounds.value.set(sizes.width, sizes.height, 100)
   if (velocityVariable) velocityVariable.material.uniforms.uBounds.value.set(sizes.width, sizes.height, 100)
 
-  // Cleanly rebuild meshes without leaking memory
   createPlaceholderMeshes()
   updatePlaceholderMeshTransforms()
 }
@@ -450,7 +467,6 @@ lenis.on('scroll', ({ scroll, velocity }) => {
   currentScroll = scroll; scrollVelocity = velocity; ScrollTrigger.update();
 })
 
-// --- LIGHTBOX INTERACTION LOGIC ---
 const lightbox = document.getElementById('lightbox');
 const lightboxImg = document.getElementById('lightbox-img');
 const closeBg = document.getElementById('lightbox-close-bg');
@@ -463,10 +479,9 @@ document.querySelectorAll('.project-card').forEach(card => {
     if (imgSrc) {
       lightboxImg.src = imgSrc;
       lightbox.classList.add('is-active');
-      document.body.classList.add('lightbox-open'); // Tells CSS to restore system cursor!
+      document.body.classList.add('lightbox-open'); 
       lenis.stop(); 
       
-      // Hide the custom tech cursor so it doesn't get stuck under the lightbox
       const cursorEl = document.querySelector('.tech-cursor');
       if (cursorEl) cursorEl.style.opacity = '0';
     }
@@ -475,12 +490,11 @@ document.querySelectorAll('.project-card').forEach(card => {
 
 function closeLightbox() {
   lightbox.classList.remove('is-active');
-  document.body.classList.remove('lightbox-open'); // Re-hides system cursor
+  document.body.classList.remove('lightbox-open'); 
   
   setTimeout(() => { lightboxImg.src = ''; }, 300); 
   lenis.start(); 
   
-  // Bring custom cursor back
   if (window.matchMedia('(pointer: fine)').matches) {
     const cursorEl = document.querySelector('.tech-cursor');
     if (cursorEl) cursorEl.style.opacity = '1';
@@ -490,7 +504,6 @@ function closeLightbox() {
 closeBg.addEventListener('click', closeLightbox);
 closeBtn.addEventListener('click', closeLightbox);
 
-// Smooth Scroll Links
 document.querySelectorAll('[data-scroll-target]').forEach((button) => {
   button.addEventListener('click', (event) => {
     event.preventDefault()
@@ -528,6 +541,10 @@ function raf(time) {
     velocityVariable.material.uniforms.uMouse.value.copy(fboMouse);
     velocityVariable.material.uniforms.uTime.value += 0.01;
     positionVariable.material.uniforms.uTime.value += 0.01;
+    
+    // Animate the particle colors
+    if (pointsMaterial) pointsMaterial.uniforms.uTime.value += 0.02; 
+    
     gpuCompute.compute();
     if (pointsMaterial) pointsMaterial.uniforms.uPositionTexture.value = gpuCompute.getCurrentRenderTarget(positionVariable).texture;
   }
