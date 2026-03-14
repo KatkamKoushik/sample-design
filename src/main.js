@@ -334,7 +334,6 @@ finalComposer.addPass(renderScene)
 finalComposer.addPass(finalPass)
 
 // --- FBO / GPGPU bootstrap ---
-// Dynamically set particle count (4,096 on mobile vs 16,384 on desktop)
 const COMPUTE_SIZE = isMobile ? 128 : 256;
 let gpuCompute = null
 let positionVariable = null
@@ -619,8 +618,6 @@ function initParticles() {
   particles = new THREE.Points(geometry, pointsMaterial)
   particles.frustumCulled = false
   particles.position.z = -300
-  
-  // FIX 1: Use .enable() so particles stay on the main camera layer AND get the bloom layer
   particles.layers.enable(BLOOM_LAYER) 
   scene.add(particles)
 }
@@ -682,44 +679,16 @@ function createPlaceholderMeshes() {
   })
 }
 
-const raycaster = new THREE.Raycaster()
-const pointerNDC = new THREE.Vector2(2, 2)
-
-// FIX 2: Unified pointer event (replaces separate mousemove/pointermove)
-window.addEventListener('pointermove', (event) => {
-  // Mobile touch safe guard
-  if (event.pointerType === 'touch') {
-    const cursorEl = document.querySelector('.custom-cursor'); // Adjust class based on your cursor.js
-    if (cursorEl) cursorEl.style.opacity = '0';
-  } else {
-    const cursorEl = document.querySelector('.custom-cursor');
-    if (cursorEl) cursorEl.style.opacity = '1';
-  }
-
-  // Update Raycaster coordinates
-  const rect = renderer.domElement.getBoundingClientRect()
-  pointerNDC.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
-  pointerNDC.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
-
-  // Update FBO Orthographic coordinates
-  if (typeof fboMouse !== 'undefined') {
-    fboMouse.x = event.clientX;
-    fboMouse.y = window.innerHeight - event.clientY;
-    fboMouse.z = 0;
-  }
-});
-
-
-
+// --- TOUCH AND MOUSE INPUT ---
 const raycaster = new THREE.Raycaster()
 const pointerNDC = new THREE.Vector2(2, 2)
 
 function handleInput(event) {
   if (event.pointerType === 'touch') {
-    const cursorEl = document.querySelector('.custom-cursor'); 
+    const cursorEl = document.querySelector('.tech-cursor');
     if (cursorEl) cursorEl.style.opacity = '0';
   } else {
-    const cursorEl = document.querySelector('.custom-cursor');
+    const cursorEl = document.querySelector('.tech-cursor');
     if (cursorEl) cursorEl.style.opacity = '1';
   }
 
@@ -735,8 +704,7 @@ function handleInput(event) {
 }
 
 window.addEventListener('pointermove', handleInput);
-window.addEventListener('pointerdown', handleInput); 
-// ---------------------------------------
+window.addEventListener('pointerdown', handleInput);
 
 function updatePlaceholderMeshTransforms(scrollY = 0) {
   const viewportHeight = sizes.height
@@ -764,7 +732,6 @@ function onResize() {
   bloomComposer.setSize(sizes.width, sizes.height)
   finalComposer.setSize(sizes.width, sizes.height)
   
-  // FIX 3: Update bloom pass safely on resize to keep mobile performance optimizations
   if (typeof bloomPass !== 'undefined') {
     const bResX = isMobile ? sizes.width / 2 : sizes.width;
     const bResY = isMobile ? sizes.height / 2 : sizes.height;
@@ -878,14 +845,12 @@ function raf(time) {
   requestAnimationFrame(raf);
 }
 
-// --- FIX 1: Only build the custom cursor if the device has a real mouse/trackpad ---
-// This completely disables it for mobile, even in "Desktop Mode"
+// Prevent cursor spawn on pure touch devices
 if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-  const cursor = initCursor();
+  const cursor = initCursor()
   if (cursor && typeof cursor.setupMagnetic === 'function') {
-    cursor.setupMagnetic();
+    cursor.setupMagnetic()
   }
 }
 
-// Start the heartbeat loop
 raf(performance.now());
