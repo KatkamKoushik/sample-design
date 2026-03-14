@@ -147,8 +147,37 @@ function splitWords(selector) {
 splitWords('.hero__title');
 splitWords('.hero__subtitle');
 
+
+// --- Preloader Animation ---
+let loadProgress = { val: 0 };
+gsap.to(loadProgress, {
+  val: 100,
+  duration: 2.2, // Gives the 3D shaders enough time to compile without lagging!
+  roundProps: "val",
+  onUpdate: () => {
+    const countEl = document.querySelector('.preloader__count');
+    const barEl = document.querySelector('.preloader__bar');
+    if(countEl) countEl.innerText = loadProgress.val + '%';
+    if(barEl) barEl.style.width = loadProgress.val + '%';
+  },
+  onComplete: () => {
+    // Slide the preloader up and away
+    gsap.to('.preloader', {
+      yPercent: -100,
+      duration: 1.2,
+      ease: 'power4.inOut',
+      onComplete: () => {
+        document.querySelector('.preloader').remove();
+        heroTimeline.play(); // Start the text cascade ONLY after loading is done
+      }
+    });
+  }
+});
+
 // --- The Cascade Animation ---
-const heroTimeline = gsap.timeline({ delay: 0.2 });
+// Start paused so it waits for the preloader to finish
+const heroTimeline = gsap.timeline({ paused: true });
+
 
 heroTimeline.from('.hero__eyebrow', {
   opacity: 0,
