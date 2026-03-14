@@ -280,45 +280,54 @@ gl_FragColor = color;
 `
 
 const sizes = {
-width: window.innerWidth,
-height: window.innerHeight,
+  width: window.innerWidth,
+  height: window.innerHeight,
 }
 
 let isMobile = window.innerWidth < 768
 
 const camera = new THREE.OrthographicCamera(
-0,
-sizes.width,
-sizes.height,
-0,
--1000,
-1000,
+  0,
+  sizes.width,
+  sizes.height,
+  0,
+  -1000,
+  1000,
 )
 camera.position.z = 10
 
 const renderer = new THREE.WebGLRenderer({
-canvas: backgroundCanvas,
-antialias: true,
-alpha: true,
-})
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-renderer.setSize(sizes.width, sizes.height)
-renderer.setClearColor(0x000000, 0)
+  canvas: canvas,
+  antialias: true,
+  alpha: true
+});
+
+// 1. Cap the pixel ratio for mobile, allow up to 2 for desktop
+const maxPixelRatio = isMobile ? 1.5 : 2;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxPixelRatio));
+
+// (Cleanup: Use your 'sizes' object here instead of calling window again!)
+renderer.setSize(sizes.width, sizes.height);
 
 // --- Post-processing (selective bloom: particles only) ---
-const BLOOM_LAYER = 1
-const bloomComposer = new EffectComposer(renderer)
-const finalComposer = new EffectComposer(renderer)
+const BLOOM_LAYER = 1;
+const bloomComposer = new EffectComposer(renderer);
+const finalComposer = new EffectComposer(renderer);
 
-const renderScene = new RenderPass(scene, camera)
+const renderScene = new RenderPass(scene, camera);
+
+// 2. THE BLOOM FIX: 
+// On mobile, tell the bloom pass to calculate at HALF resolution. 
+// It will still look glowing and blurry, but saves 75% of the math!
+const bloomResX = isMobile ? sizes.width / 2 : sizes.width;
+const bloomResY = isMobile ? sizes.height / 2 : sizes.height;
 
 const bloomPass = new UnrealBloomPass(
-new THREE.Vector2(sizes.width, sizes.height),
-0.85, // strength
-0.95, // radius
-0.6, // threshold (only bright particles bloom)
-)
-
+  new THREE.Vector2(bloomResX, bloomResY),
+  0.85, // strength
+  0.95, // radius
+  0.6,  // threshold (only bright particles bloom)
+);
 bloomComposer.renderToScreen = false
 bloomComposer.addPass(renderScene)
 bloomComposer.addPass(bloomPass)
@@ -820,71 +829,75 @@ easing: (t) => 1 - Math.pow(1 - t, 3),
 })
 
 function raf(time) {
-if (typeof lenis !== 'undefined' && lenis) lenis.raf(time);
+  if (typeof lenis !== 'undefined' && lenis) lenis.raf(time);
 
-const now = performance.now();
-const delta = Math.min((now - lastRafTime) / 1000, 0.05);
-lastRafTime = now;
+  const now = performance.now();
+  const delta = Math.min((now - lastRafTime) / 1000, 0.05);
+  lastRafTime = now;
 
-// 1. Liquid Image Transforms & Hover Effects
-const targetVelocity = isMobile ? 0 : scrollVelocity;
-smoothedVelocity += (targetVelocity - smoothedVelocity) * 0.16;
+  // 1. Liquid Image Transforms & Hover Effects
+  const targetVelocity = isMobile ? 0 : scrollVelocity;
+  smoothedVelocity += (targetVelocity - smoothedVelocity) * 0.16;
 
-if (typeof updatePlaceholderMeshTransforms === 'function') {
-updatePlaceholderMeshTransforms(currentScroll);
-}
+  if (typeof updatePlaceholderMeshTransforms === 'function') {
+    updatePlaceholderMeshTransforms(currentScroll);
+  }
 
-// Fire the raycaster to detect if the mouse is over an image
-raycaster.setFromCamera(pointerNDC, camera);
-const intersects = raycaster.intersectObjects(placeholderMeshes.map(p => p.mesh));
+  // THE FIX: Only run CPU-heavy raycasting if the device actually has a mouse!
+  let intersects = [];
+  if (!isMobile && window.matchMedia('(hover: hover)').matches) {
+    raycaster.setFromCamera(pointerNDC, camera);
+    intersects = raycaster.intersectObjects(placeholderMeshes.map(p => p.mesh));
+  }
 
-// Update every image plane's shader uniforms so they actually react!
-placeholderMeshes.forEach(({ mesh }) => {
-// A. Send the scroll speed to bend the images
-mesh.material.uniforms.uVelocity.value = smoothedVelocity;
+  // Update every image plane's shader uniforms
+  placeholderMeshes.forEach(({ mesh }) => {
+    // A. Send the scroll speed to bend the images
+    mesh.material.uniforms.uVelocity.value = smoothedVelocity;
 
-// B. Send the hover state to trigger the RGB chromatic aberration
-const isHovered = intersects.length > 0 && intersects[0].object === mesh;
-const targetHover = isHovered ? 1.0 : 0.0;
-mesh.material.uniforms.uHoverStrength.value += (targetHover - mesh.material.uniforms.uHoverStrength.value) * 0.1;
+    // B. Send the hover state (Will always be 0 on mobile now, saving battery!)
+    const isHovered = intersects.length > 0 && intersects[0].object === mesh;
+    const targetHover = isHovered ? 1.0 : 0.0;
+    mesh.material.uniforms.uHoverStrength.value += (targetHover - mesh.material.uniforms.uHoverStrength.value) * 0.1;
 
-// C. Send the mapped mouse coordinates to the image shader
-mesh.material.uniforms.uMouse.value.set(
-(pointerNDC.x * 0.5) + 0.5,
-(pointerNDC.y * 0.5) + 0.5
-);
-});
-// 2. GPU Physics (Particles)
-if (gpuCompute && positionVariable && velocityVariable) {
-velocityVariable.material.uniforms.uMouse.value.copy(fboMouse);
+    // C. Send the mapped mouse coordinates to the image shader
+    mesh.material.uniforms.uMouse.value.set(
+      (pointerNDC.x * 0.5) + 0.5,
+      (pointerNDC.y * 0.5) + 0.5
+    );
+  });
 
-velocityVariable.material.uniforms.uTime.value += 0.01;
-positionVariable.material.uniforms.uTime.value += 0.01;
+  // 2. GPU Physics (Particles)
+  if (gpuCompute && positionVariable && velocityVariable) {
+    velocityVariable.material.uniforms.uMouse.value.copy(fboMouse);
 
-gpuCompute.compute();
+    velocityVariable.material.uniforms.uTime.value += 0.01;
+    positionVariable.material.uniforms.uTime.value += 0.01;
 
-if (pointsMaterial) {
-pointsMaterial.uniforms.uPositionTexture.value = gpuCompute.getCurrentRenderTarget(positionVariable).texture;
-}
-}
+    gpuCompute.compute();
 
-// 3. THE COMPLEX RENDER (Selective Bloom)
-if (typeof bloomComposer !== 'undefined' && typeof finalComposer !== 'undefined') {
-// A. Tell camera to ONLY look at the particles
-camera.layers.set(BLOOM_LAYER);
-bloomComposer.render();
+    if (pointsMaterial) {
+      pointsMaterial.uniforms.uPositionTexture.value = gpuCompute.getCurrentRenderTarget(positionVariable).texture;
+    }
+  }
 
-// FIX 2: Dynamically pass the bloomed texture to the final pass safely
-if (finalPass && finalPass.uniforms && finalPass.uniforms.bloomTexture) {
-finalPass.uniforms.bloomTexture.value = bloomComposer.readBuffer.texture;
-}
+  // 3. THE COMPLEX RENDER (Selective Bloom)
+  if (typeof bloomComposer !== 'undefined' && typeof finalComposer !== 'undefined') {
+    // A. Tell camera to ONLY look at the particles
+    camera.layers.set(BLOOM_LAYER);
+    bloomComposer.render();
 
-// B. Tell camera to look at the normal scene again
-camera.layers.set(0);
-finalComposer.render();
-}
+    // Dynamically pass the bloomed texture to the final pass safely
+    if (finalPass && finalPass.uniforms && finalPass.uniforms.bloomTexture) {
+      finalPass.uniforms.bloomTexture.value = bloomComposer.readBuffer.texture;
+    }
 
-requestAnimationFrame(raf);
+    // B. Tell camera to look at the normal scene again
+    camera.layers.set(0);
+    finalComposer.render();
+  }
+
+  requestAnimationFrame(raf);
 }
 
 
