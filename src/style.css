@@ -64,17 +64,11 @@ body {
   font-family: var(--font-body);
   background: radial-gradient(ellipse at top, #1e293b 0%, var(--color-bg) 60%);
   color: var(--color-text);
-  min-height: 100vh;
+  min-height: 100dvh; /* FIX: Changed vh to dvh for perfect mobile scaling */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
   cursor: auto; /* Restored default cursor globally */
-}
-
-a, button {
-  cursor: pointer; /* Ensure links and buttons have the pointer hand */
-  text-decoration: none;
-  color: inherit;
 }
 
 /* ============================================================
